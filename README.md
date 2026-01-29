@@ -18,6 +18,7 @@ Python‑Version global setzen
 pyenv global 3.12.2
 
 Python‑Version prüfen
+
 python --version
 //---------------------------------------------------------------------------------------------------------
 New Poetry als Virtuelle Umgebeung
@@ -29,18 +30,23 @@ eventuell poetry Pfad angben ("C:\Users\<NAME>\AppData\Roaming\Python\Scripts")
 Umgebungsvariablen → PATH
 
 Virtuelle Poetry umgebung instalieren
+
 poetry install
 
 Abhängigkeit hinzufügen
+
 poetry add numpy
 
-start poetry
+<<start poetry>>
+
 poetry env activate
 
 Sobald du das Plugin installiern
+
 poetry self add poetry-plugin-shell
 
 Poetry Umgebung starten
+
 poetry shell
 
 ((cnn-using-pytorch-py3.12) PS C:\...)
