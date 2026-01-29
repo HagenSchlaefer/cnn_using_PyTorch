@@ -2,7 +2,9 @@
 cnn using PyTorch to classify MNIST data
 
 ## repository Klonen
+```powershell
 git clone https://github.com/HagenSchlaefer/cnn_using_PyTorch.git
+```
 
 ### Python 3.12 instaliern!!
 Installation von pyenv‑win zum verwalten von Python
