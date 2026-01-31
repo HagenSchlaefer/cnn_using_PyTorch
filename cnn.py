@@ -1,86 +1,52 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+#import torch.nn.functional as F
 import torchvision
-import torchvision.transforms as transforms
+#import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
 
-from data import get_mnist
+from data import get_mnist, load_mnist_cnn, batch_generator
+from MyCnn import ConvNet
 
-# get mnist data
-images, labels = get_mnist()
-print(images.shape)  # (60000, 784)
-print(labels.shape)  # (60000, 10)
-# # Device configuration
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# # Hyper-parameters 
-# num_epochs = 5
-# batch_size = 4
-# learning_rate = 0.001
-
-# # dataset has PILImage images of range [0, 1]. 
-# # We transform them to Tensors of normalized range [-1, 1]
-# transform = transforms.Compose(
-#     [transforms.ToTensor(),
-#      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-# # CIFAR10: 60000 32x32 color images in 10 classes, with 6000 images per class
-# train_dataset = torchvision.datasets.CIFAR10(root='./data', train=True,
-#                                         download=True, transform=transform)
-
-# test_dataset = torchvision.datasets.CIFAR10(root='./data', train=False,
-#                                        download=True, transform=transform)
-
-# train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-#                                           shuffle=True)
-
-# test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
-#                                          shuffle=False)
-
-# classes = ('plane', 'car', 'bird', 'cat',
-#            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-# def imshow(img):
-#     img = img / 2 + 0.5  # unnormalize
-#     npimg = img.numpy()
-#     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-#     plt.show()
+# get mnist training data
+images_cnn, labels_cnn = load_mnist_cnn()
+print(images_cnn.shape)  # (60000, 1, 28, 28)
+print(labels_cnn.shape)  # (60000,) 
 
 
-# # get some random training images
-# dataiter = iter(train_loader)
-# images, labels = next(dataiter)
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# # show images
-# imshow(torchvision.utils.make_grid(images))
+# Hyper-parameters 
+num_epochs = 5
+batch_size = 4
+learning_rate = 0.001
 
-# class ConvNet(nn.Module):
-#     def __init__(self):
-#         super(ConvNet, self).__init__()
-#         self.conv1 = nn.Conv2d(3, 6, 5)
-#         self.pool = nn.MaxPool2d(2, 2)
-#         self.conv2 = nn.Conv2d(6, 16, 5)
-#         self.fc1 = nn.Linear(16 * 5 * 5, 120)
-#         self.fc2 = nn.Linear(120, 84)
-#         self.fc3 = nn.Linear(84, 10)
+model = ConvNet().to(device)
+loss_F = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-#     def forward(self, x):
-#         # -> n, 3, 32, 32
-#         x = self.pool(F.relu(self.conv1(x)))  # -> n, 6, 14, 14
-#         x = self.pool(F.relu(self.conv2(x)))  # -> n, 16, 5, 5
-#         x = x.view(-1, 16 * 5 * 5)            # -> n, 400
-#         x = F.relu(self.fc1(x))               # -> n, 120
-#         x = F.relu(self.fc2(x))               # -> n, 84
-#         x = self.fc3(x)                       # -> n, 10
-#         return x
+for batch_imgs, batch_lbls in batch_generator(images_cnn, labels_cnn, batch_size=32):
+    print(batch_imgs.shape)  # (32, 1, 28, 28)
+    print(batch_lbls.shape)  # (32,)
+    print(batch_lbls)      # tensor of size (32,)
+    break
 
 
-# model = ConvNet().to(device)
-
-# criterion = nn.CrossEntropyLoss()
-# optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+# # Test von mir
+# for epoch in range(num_epochs):
+#     for img, l in zip(images, labels):
+#         print(img.shape)  # (784, 1)
+#         print(l.shape)    # (10, 1)
+#         img_reshape = img.reshape(1, 1, 28, 28)  
+#         print(img_reshape.shape) # (1, 1, 28, 28)   #(batch, channels, height, width)
+#         print(img_reshape)  
+#         img_tensor = torch.tensor(img_reshape, dtype=torch.float32).to(device)
+#         imshow(img_tensor.cpu())
+#         #img_tensor = img_tensor.unsqueeze(0)  # add batch dimension -> (1,
+#         break
+#     break
 
 # n_total_steps = len(train_loader)
 # for epoch in range(num_epochs):
@@ -92,7 +58,7 @@ print(labels.shape)  # (60000, 10)
 
 #         # Forward pass
 #         outputs = model(images)
-#         loss = criterion(outputs, labels)
+#         loss = loss_F(outputs, labels)
 
 #         # Backward and optimize
 #         optimizer.zero_grad()
