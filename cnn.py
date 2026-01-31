@@ -27,10 +27,10 @@ def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
         correct = 0
         total = 0
         for i, (batch_imgs, batch_lbls) in enumerate(batch_generator(images_cnn, labels_cnn, batch_size=batch_size)):
-
-            images = batch_imgs.to(device)        # (B, 1, 28, 28)
-            labels = batch_lbls.to(device)        # (B,)
-
+            
+            images = torch.from_numpy(batch_imgs).float().to(device)    # (B, 1, 28, 28)
+            labels = torch.from_numpy(batch_lbls).long().to(device)     # (B,)
+                    
             # Forward pass
             outputs = model(images)
             loss = loss_fn(outputs, labels)
