@@ -1,101 +1,80 @@
 import torch
-import torch.nn as nn
+#import torch.nn as nn
 #import torch.nn.functional as F
-import torchvision
+#import torchvision
 #import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
-import numpy as np
+#import numpy as np
 
-from data import get_mnist, load_mnist_cnn, batch_generator
-from MyCnn import ConvNet
+from data import load_mnist_cnn, batch_generator#, show_image
+#from MyCnn import ConvNet
 
-# get mnist training data
-images_cnn, labels_cnn = load_mnist_cnn()
-print(images_cnn.shape)  # (60000, 1, 28, 28)
-print(labels_cnn.shape)  # (60000,) 
+def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
+# Train the model
+    
+    # get mnist training data
+    images_cnn, labels_cnn = load_mnist_cnn()
+    # print(images_cnn.shape)  # (60000, 1, 28, 28)
+    # print(labels_cnn.shape)  # (60000,)
 
+    model.train()
 
-# Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    epoch_losses = []
+    epoch_accuracies = []
 
-# Hyper-parameters 
-num_epochs = 5
-batch_size = 4
-learning_rate = 0.001
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        for i, (batch_imgs, batch_lbls) in enumerate(batch_generator(images_cnn, labels_cnn, batch_size=batch_size)):
 
-model = ConvNet().to(device)
-loss_F = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+            images = batch_imgs.to(device)        # (B, 1, 28, 28)
+            labels = batch_lbls.to(device)        # (B,)
 
-for batch_imgs, batch_lbls in batch_generator(images_cnn, labels_cnn, batch_size=32):
-    print(batch_imgs.shape)  # (32, 1, 28, 28)
-    print(batch_lbls.shape)  # (32,)
-    print(batch_lbls)      # tensor of size (32,)
-    break
+            # Forward pass
+            outputs = model(images)
+            loss = loss_fn(outputs, labels)
 
+            # Backward and optimize
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-# # Test von mir
-# for epoch in range(num_epochs):
-#     for img, l in zip(images, labels):
-#         print(img.shape)  # (784, 1)
-#         print(l.shape)    # (10, 1)
-#         img_reshape = img.reshape(1, 1, 28, 28)  
-#         print(img_reshape.shape) # (1, 1, 28, 28)   #(batch, channels, height, width)
-#         print(img_reshape)  
-#         img_tensor = torch.tensor(img_reshape, dtype=torch.float32).to(device)
-#         imshow(img_tensor.cpu())
-#         #img_tensor = img_tensor.unsqueeze(0)  # add batch dimension -> (1,
-#         break
-#     break
+            running_loss += loss.item()
+            # Accuracy
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-# n_total_steps = len(train_loader)
-# for epoch in range(num_epochs):
-#     for i, (images, labels) in enumerate(train_loader):
-#         # origin shape: [4, 3, 32, 32] = 4, 3, 1024
-#         # input_layer: 3 input channels, 6 output channels, 5 kernel size
-#         images = images.to(device)
-#         labels = labels.to(device)
+        avg_loss = running_loss / (i + 1)
+        accuracy = 100 * correct / total if total > 0 else 0
 
-#         # Forward pass
-#         outputs = model(images)
-#         loss = loss_F(outputs, labels)
+        epoch_losses.append(avg_loss)
+        epoch_accuracies.append(accuracy)
 
-#         # Backward and optimize
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
+        print(f'Epoch [{epoch+1}/{num_epochs}] '
+              f'Loss: {avg_loss:.4f}, '
+              f'Accuracy: {accuracy:.2f}%')
 
-#         if (i+1) % 2000 == 0:
-#             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
+    print('Finished Training')
+    torch.save(model.state_dict(), f'cnn_epoch{epoch+1}.pth')
+    return epoch_losses, epoch_accuracies
 
-# print('Finished Training')
-# PATH = './cnn.pth'
-# torch.save(model.state_dict(), PATH)
+def plot_metrics(losses, accuracies, num_epochs):
+# plot loss and accuracy curves
+    epochs = range(1, num_epochs + 1)
 
-# with torch.no_grad():
-#     n_correct = 0
-#     n_samples = 0
-#     n_class_correct = [0 for i in range(10)]
-#     n_class_samples = [0 for i in range(10)]
-#     for images, labels in test_loader:
-#         images = images.to(device)
-#         labels = labels.to(device)
-#         outputs = model(images)
-#         # max returns (value ,index)
-#         _, predicted = torch.max(outputs, 1)
-#         n_samples += labels.size(0)
-#         n_correct += (predicted == labels).sum().item()
-        
-#         for i in range(batch_size):
-#             label = labels[i]
-#             pred = predicted[i]
-#             if (label == pred):
-#                 n_class_correct[label] += 1
-#             n_class_samples[label] += 1
+    plt.figure()
+    plt.plot(epochs, losses)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss")
+    plt.show()
 
-#     acc = 100.0 * n_correct / n_samples
-#     print(f'Accuracy of the network: {acc} %')
+    plt.figure()
+    plt.plot(epochs, accuracies)
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy (%)")
+    plt.title("Training Accuracy")
+    plt.show()
 
-#     for i in range(10):
-#         acc = 100.0 * n_class_correct[i] / n_class_samples[i]
-#         print(f'Accuracy of {classes[i]}: {acc} %')

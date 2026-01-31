@@ -3,15 +3,6 @@ import pathlib
 import matplotlib.pyplot as plt
 import torchvision
 
-def get_mnist():
-    with np.load(f"{pathlib.Path(__file__).parent.absolute()}/data/mnist.npz") as f:
-        images, labels = f["x_train"], f["y_train"]
-    images = images.astype("float32") / 255
-    images = np.reshape(images, (images.shape[0], images.shape[1] * images.shape[2]))
-    labels = np.eye(10)[labels]
-    return images, labels
-
-
 def load_mnist_cnn():
     # MNIST laden
     path = pathlib.Path(__file__).parent.absolute() / "data" / "mnist.npz"
@@ -39,13 +30,6 @@ def batch_generator(images, labels, batch_size=64, shuffle=True):
         batch_idx = indices[start:end]
         yield images[batch_idx], labels[batch_idx]
 
-#alte funktion
-def imshow(img):
-    #plt.imshow(feature_map[0, i, :, :].detach().numpy(), cmap='gray')
-    npimg = img.numpy()
-    plt.imshow(npimg.squeeze(), cmap='gray')
-    plt.show()   
-
 def show_image(img):
     # img erwartet: (1, 28, 28) oder (28, 28)
     if img.ndim == 3:
@@ -70,8 +54,10 @@ def show_feature_maps(feature_maps, max_maps=16):
         plt.axis("off")
     plt.show()
 
-#view all feature maps in a grid
+
 def show_all_feature_maps(feature_maps):
+#view all feature maps in a grid
+
     # feature_maps: (1, C, H, W)
     maps = feature_maps[0]          # Batch entfernen
     maps = maps.unsqueeze(1)        # (C, 1, H, W) für make_grid
