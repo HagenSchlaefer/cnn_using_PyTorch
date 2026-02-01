@@ -24,17 +24,6 @@ def load_mnist_cnn():
 
     return images, labels
 
-def batch_generator(images, labels, batch_size=64, shuffle=True):
-# generate batches
-    indices = np.arange(len(images))
-    if shuffle:
-        np.random.shuffle(indices)
-
-    for start in range(0, len(images), batch_size):
-        end = start + batch_size
-        batch_idx = indices[start:end]
-        yield images[batch_idx], labels[batch_idx]
-
 def batch_generator_augmented(images, labels, batch_size=64, shuffle=True, augment=True):
 # generate batches with optional data augmentation
 
@@ -58,7 +47,7 @@ def batch_generator_augmented(images, labels, batch_size=64, shuffle=True, augme
         batch_imgs = images[batch_idx]
         batch_lbls = labels[batch_idx]
 
-        # Augmentation auf jedes Bild anwenden, falls gewünscht
+        # augmentation if enabled
         if augment:
             batch_imgs = torch.stack([transform(img) for img in batch_imgs])
 
@@ -74,32 +63,16 @@ def show_image(img):
     plt.axis("off")
     plt.show()
 
-def show_feature_maps(feature_maps, max_maps=16):
-    # feature_maps: (1, channels, H, W)
-    maps = feature_maps[0]  # delete batch dimension
-    num_maps = min(maps.shape[0], max_maps)
-
-    cols = 4
-    rows = (num_maps + cols - 1) // cols
-
-    plt.figure(figsize=(10, 10))
-    for i in range(num_maps):
-        plt.subplot(rows, cols, i + 1)
-        plt.imshow(maps[i], cmap="gray")
-        plt.axis("off")
-    plt.show()
-
-
-def show_all_feature_maps(feature_maps):
+def show_feature_maps(feature_maps):
 #view all feature maps in a grid
-
     # feature_maps: (1, C, H, W)
     maps = feature_maps[0]          # delete batch dimension
     maps = maps.unsqueeze(1)        # (C, 1, H, W) for make_grid
 
-    grid = torchvision.utils.make_grid(maps, nrow=8, padding=1)
-    plt.imshow(grid.squeeze(), cmap="gray")
-    plt.axis("off")
+    grid = torchvision.utils.make_grid(maps, nrow=8, padding=1) # make grid (C, 1, H, W) -> (1, H_grid, W_grid)
+    grid = grid.permute(1, 2, 0).numpy()  # (H, W, 3)
+    
+    plt.imshow(grid)
     plt.show()
 
 def prep_image(image_path):
@@ -119,4 +92,59 @@ def prep_image(image_path):
     img = img.astype(np.float32)
     
     return img
+
+def normalize_per_channel(x):
+    # x: (C, H, W)
+    c, h, w = x.shape
+    x = x.view(c, -1)
+
+    min_vals = x.min(dim=1, keepdim=True)[0]
+    max_vals = x.max(dim=1, keepdim=True)[0]
+
+    x = (x - min_vals) / (max_vals - min_vals + 1e-6)
+    return x.view(c, h, w)
+
+
+def visualize_activations(x, name="layer"):
+# Visualize feature maps or activations of a layer
+    x = x.cpu()
+
+    # CONV FEATURE MAPS
+    if x.dim() == 4:  # (B, C, H, W)
+        maps = x[0]
+        maps = normalize_per_channel(maps)
+        maps = maps.unsqueeze(1)
+
+        grid = torchvision.utils.make_grid(
+            maps,
+            nrow=8,
+            padding=1,
+            pad_value=0.0
+        )
+
+        grid = grid.permute(1, 2, 0).numpy()
+
+        h, w, _ = grid.shape
+        plt.figure(figsize=(w / 120, h / 120), dpi=120)
+        plt.imshow(grid, interpolation="nearest")
+        plt.title(name)
+        plt.axis("off")
+        plt.show()
+
+    # FC / VIEW LAYERS
+    elif x.dim() == 2:  # (B, N)
+        vec = x[0].numpy()
+        vec = (vec - vec.min()) / (vec.max() - vec.min() + 1e-6)
+
+        plt.figure(figsize=(10, 2))
+        plt.imshow(vec[np.newaxis, :], aspect="auto", cmap="viridis")
+        plt.colorbar(label="activation")
+        plt.title(name)
+        plt.yticks([])
+        plt.xlabel("Neuron index")
+        plt.show()
+
+    else:
+        print(f"{name}: unsupported shape {x.shape}")
+
 

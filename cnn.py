@@ -1,13 +1,7 @@
 import torch
-#import torch.nn as nn
-#import torch.nn.functional as F
-#import torchvision
-#import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
-#import numpy as np
 
-from data import batch_generator_augmented, load_mnist_cnn, prep_image, show_image#, show_image, batch_generator
-#from MyCnn import ConvNet
+from data import batch_generator_augmented, load_mnist_cnn, prep_image, show_image
 
 def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
 # Train the model
@@ -94,6 +88,6 @@ def run(model, device, image_path):
         image = torch.from_numpy(image).float().to(device)  # (1, 1, 28, 28)
         output = model(image)
         pred = torch.argmax(output, dim=1)
-        return pred.item()
+        return pred.item(), model
     
     
