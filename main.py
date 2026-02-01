@@ -1,75 +1,60 @@
-#main.py
-import torch
-import torch.nn as nn
+# main.py
+import sys
+import os
 
-from MyCnn import ConvNet
-from myCnn2 import ConvNet as ConvNet2
-from cnn import train, plot_metrics, run
-from data import save_activations, visualize_activations
-
-# Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Hyper-parameters 
-num_epochs = 15
-batch_size = 64
-learning_rate = 0.001
-
-#model = ConvNet().to(device)
-model = ConvNet2().to(device)
-loss_F = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+from PySide6.QtWidgets import QApplication
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtCore import QFile, Qt
+from PySide6.QtGui import QPixmap
 
 
-# Train the model
-# losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size)
-# plot_metrics(losses, accuracies, num_epochs)
+class MainWindow:
+    def __init__(self):
+        loader = QUiLoader()
 
-# Test the model
-model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
-model.eval()
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        ui_path = os.path.join(base_dir, "mainwindow.ui")
 
-img_path = f"../TestData/hina9.png"
-pred, model = run(model, device, img_path)
-print(f"Predicted label: {pred}")
+        ui_file = QFile(ui_path)
+        if not ui_file.open(QFile.ReadOnly):
+            raise RuntimeError("Could not open UI file")
 
-# visualize_activations(model.conv1_x, "conv1")
-# visualize_activations(model.convStride1_x, "convStride1")
-# visualize_activations(model.conv2_x, "conv2")
-# visualize_activations(model.convStride2_x, "convStride2")
+        self.window = loader.load(ui_file)
+        ui_file.close()
 
-# visualize_activations(model.view_x, "flatten")
-# visualize_activations(model.fc1_x, "fc1")
-# visualize_activations(model.fc2_x, "fc2")
-# visualize_activations(model.fc3_x, "fc3")
+        if self.window is None:
+            raise RuntimeError("UI loading failed")
 
-save_activations(model.conv1_x, "1_conv1")
-save_activations(model.convStride1_x, "2_convStride1")
-save_activations(model.conv2_x, "3_conv2")
-save_activations(model.convStride2_x, "4_convStride2")
+        # Referenzen auf Widgets
+        self.output_label = self.window.findChild(type(self.window.output), "output")
 
-save_activations(model.view_x, "5_flatten")
-save_activations(model.fc1_x, "6_fc1")
-save_activations(model.fc2_x, "7_fc2")
-save_activations(model.fc3_x, "8_fc3")
+        # Ursprüngliches Pixmap merken
+        self.original_pixmap = self.output_label.pixmap()
 
-# for i in range(10):
-#     if i == 4:
-#         for j in range(1):
-#             img_path = f"../TestData/{i}.png"
-#             pred, model = run(model, device, img_path)
-#             print(f"Image: {i}  Predicted label: {pred}")
+        # resizeEvent überschreiben
+        self.window.resizeEvent = self.on_resize
 
-#             visualize_activations(model.conv1_x, "conv1")
-#             visualize_activations(model.convStride1_x, "convStride1")
-#             visualize_activations(model.conv2_x, "conv2")
-#             visualize_activations(model.convStride2_x, "convStride2")
+        self.window.setMinimumSize(910, 389)
+        self.output_label.setAlignment(Qt.AlignCenter)
 
-#             visualize_activations(model.view_x, "flatten")
-#             visualize_activations(model.fc1_x, "fc1")
-#             visualize_activations(model.fc2_x, "fc2")
-#             visualize_activations(model.fc3_x, "fc3")
-#             #print(f"Testing image of digit {i}, run {j+1}")
-#         j += 1
-    
-#     i += 1
+
+        self.window.show()
+
+    def on_resize(self, event):
+        """Skaliert das Output-Bild proportional beim Resize"""
+        if self.original_pixmap:
+            scaled = self.original_pixmap.scaled(
+                self.output_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.output_label.setPixmap(scaled)
+
+        # Wichtig: Original-Event weiterreichen
+        event.accept()
+
+
+
+app = QApplication(sys.argv)
+mw = MainWindow()
+sys.exit(app.exec())
