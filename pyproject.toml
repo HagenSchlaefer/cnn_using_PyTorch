@@ -12,7 +12,8 @@ dependencies = [
     "matplotlib (>=3.10.8,<4.0.0)",
     "opencv-python (>=4.13.0.90,<5.0.0.0)",
     "torch (>=2.10.0,<3.0.0)",
-    "torchvision (>=0.25.0,<0.26.0)"
+    "torchvision (>=0.25.0,<0.26.0)",
+    "pyside6 (>=6.10.1,<7.0.0)"
 ]
 
 
