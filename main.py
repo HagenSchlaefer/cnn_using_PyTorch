@@ -5,8 +5,7 @@ import torch.nn as nn
 from MyCnn import ConvNet
 from myCnn2 import ConvNet as ConvNet2
 from cnn import train, plot_metrics, run
-#from data import prep_image, show_image
-#import numpy as np
+from data import visualize_activations
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,11 +28,38 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # Test the model
 model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
 model.eval()
-for i in range(10):
-    for j in range(3):
-        img_path = f"../TestData/{i}.png"
-        pred = run(model, device, img_path)
-        print(f"Image: {i}  Predicted label: {pred}")
-        #print(f"Testing image of digit {i}, run {j+1}")
-        j += 1
-    i += 1
+
+img_path = f"../TestData/mama7.png"
+pred, model = run(model, device, img_path)
+print(f"Predicted label: {pred}")
+
+visualize_activations(model.conv1_x, "conv1")
+visualize_activations(model.convStride1_x, "convStride1")
+visualize_activations(model.conv2_x, "conv2")
+visualize_activations(model.convStride2_x, "convStride2")
+
+visualize_activations(model.view_x, "flatten")
+visualize_activations(model.fc1_x, "fc1")
+visualize_activations(model.fc2_x, "fc2")
+visualize_activations(model.fc3_x, "fc3")
+
+# for i in range(10):
+#     if i == 4:
+#         for j in range(1):
+#             img_path = f"../TestData/{i}.png"
+#             pred, model = run(model, device, img_path)
+#             print(f"Image: {i}  Predicted label: {pred}")
+
+#             visualize_activations(model.conv1_x, "conv1")
+#             visualize_activations(model.convStride1_x, "convStride1")
+#             visualize_activations(model.conv2_x, "conv2")
+#             visualize_activations(model.convStride2_x, "convStride2")
+
+#             visualize_activations(model.view_x, "flatten")
+#             visualize_activations(model.fc1_x, "fc1")
+#             visualize_activations(model.fc2_x, "fc2")
+#             visualize_activations(model.fc3_x, "fc3")
+#             #print(f"Testing image of digit {i}, run {j+1}")
+#         j += 1
+    
+#     i += 1
