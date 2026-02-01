@@ -5,6 +5,7 @@ import torch
 import torchvision
 from torchvision import transforms
 import cv2
+import os
 
 
 def load_mnist_cnn():
@@ -113,7 +114,7 @@ def visualize_activations(x, name="layer"):
     if x.dim() == 4:  # (B, C, H, W)
         maps = x[0]
         maps = normalize_per_channel(maps)
-        maps = maps.unsqueeze(1)
+        maps = maps.unsqueeze(1) #(num_maps, 1, H, W)
 
         grid = torchvision.utils.make_grid(
             maps,
@@ -147,4 +148,58 @@ def visualize_activations(x, name="layer"):
     else:
         print(f"{name}: unsupported shape {x.shape}")
 
+def save_activations(x, name="layer", out_dir="outputs"):
+
+    os.makedirs(out_dir, exist_ok=True)
+    # layer_dir = os.path.join(out_dir, name)
+    # os.makedirs(layer_dir, exist_ok=True)
+
+    x = x.cpu()
+
+    # CONV FEATURE MAPS
+    if x.dim() == 4:  # (B, C, H, W)
+        maps = x[0]
+        maps = normalize_per_channel(maps) 
+        maps = maps.unsqueeze(1) #(num_maps, 1, H, W)
+
+        grid = torchvision.utils.make_grid(
+            maps,
+            nrow=8,
+            padding=1,
+            pad_value=0.0
+        )
+
+        grid = grid.permute(1, 2, 0).numpy()
+
+        plt.imsave(os.path.join(out_dir, f"{name}.png"), grid)
+        plt.close()
+
+    # FC / VIEW LAYERS
+    elif x.dim() == 2:  # (B, N)
+        vec = x[0].numpy()
+        vec = (vec - vec.min()) / (vec.max() - vec.min() + 1e-6)
+        vec_img = np.tile(vec, (20, 1))
+        
+        plt.imsave(os.path.join(out_dir, f"{name}.png"), vec_img, cmap="viridis")
+        plt.close()
+
+    else:
+        print(f"{name}: unsupported shape {x.shape}")
+
+def save_feature_maps(feature_map, layer_name, out_dir="outputs"):
+    os.makedirs(out_dir, exist_ok=True)
+    layer_dir = os.path.join(out_dir, layer_name)
+    os.makedirs(layer_dir, exist_ok=True)
+
+    fmap = feature_map[0]  # Batch 0 → (C, H, W)
+
+    for i in range(fmap.shape[0]):
+        img = fmap[i].cpu().numpy()
+        img = (img - img.min()) / (img.max() - img.min() + 1e-6)
+
+        plt.imsave(
+            os.path.join(layer_dir, f"channel_{i:03d}.png"),
+            img,
+            cmap="gray"
+        )
 
