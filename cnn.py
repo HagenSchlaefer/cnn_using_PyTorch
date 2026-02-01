@@ -6,7 +6,7 @@ import torch
 import matplotlib.pyplot as plt
 #import numpy as np
 
-from data import load_mnist_cnn, batch_generator#, show_image
+from data import batch_generator_augmented, load_mnist_cnn, prep_image, show_image#, show_image, batch_generator
 #from MyCnn import ConvNet
 
 def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
@@ -26,10 +26,10 @@ def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
         running_loss = 0.0
         correct = 0
         total = 0
-        for i, (batch_imgs, batch_lbls) in enumerate(batch_generator(images_cnn, labels_cnn, batch_size=batch_size)):
+        for i, (batch_imgs, batch_lbls) in enumerate(batch_generator_augmented(images_cnn, labels_cnn, batch_size=batch_size, augment=True)):
             
-            images = torch.from_numpy(batch_imgs).float().to(device)    # (B, 1, 28, 28)
-            labels = torch.from_numpy(batch_lbls).long().to(device)     # (B,)
+            images = batch_imgs.to(device)    # (batch_size, 1, 28, 28)
+            labels = batch_lbls.to(device)    # (batch_size,)
                     
             # Forward pass
             outputs = model(images)
@@ -78,3 +78,22 @@ def plot_metrics(losses, accuracies, num_epochs):
     plt.title("Training Accuracy")
     plt.show()
 
+def run(model, device, image_path):
+# predict label for a single image
+
+    # Test with a single image
+    image = prep_image(image_path)
+    if image is None:
+        print("Failed to preprocess image.")
+        return None
+    
+    show_image(image[0])  # show the preprocessed image
+
+    model.eval()
+    with torch.no_grad():
+        image = torch.from_numpy(image).float().to(device)  # (1, 1, 28, 28)
+        output = model(image)
+        pred = torch.argmax(output, dim=1)
+        return pred.item()
+    
+    
