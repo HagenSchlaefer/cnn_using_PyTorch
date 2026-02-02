@@ -1,15 +1,28 @@
 import torch
 import matplotlib.pyplot as plt
 
-from data import batch_generator_augmented, load_mnist_cnn, prep_image, show_image
+from data import batch_generator_augmented, load_emnist_cnn, load_emnist_mapping, prep_image, show_image
+
+# #test loading data
+# # get mnist training data
+# images_cnn, labels_cnn = load_emnist_cnn()
+# # print(images_cnn.shape)  # (112800, 1, 28, 28)
+# # # print(labels_cnn.shape)  # (112800,)
+# mapping = load_emnist_mapping()
+
+# for i in range(20):
+#     print(f"Label: {mapping[labels_cnn[i]]}")
+#     show_image(images_cnn[i])  # show the first image in the dataset
+
+
 
 def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
 # Train the model
     
     # get mnist training data
-    images_cnn, labels_cnn = load_mnist_cnn()
-    # print(images_cnn.shape)  # (60000, 1, 28, 28)
-    # print(labels_cnn.shape)  # (60000,)
+    images_cnn, labels_cnn = load_emnist_cnn()
+    # print(images_cnn.shape)  # (112800, 1, 28, 28)
+    # print(labels_cnn.shape)  # (112800,)
 
     model.train()
 
