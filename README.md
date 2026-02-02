@@ -28,16 +28,7 @@ eventuell poetry Pfad unter Umgebungsvariablen → PATH angeben ("C:\Users\<NAME
 
 Virtuelle Poetry umgebung instalieren
 ```powershell
-poetry install
-```
-Abhängigkeit hinzufügen (nur wenn neue Abhängigkeit verwändet werden)
-```powershell
-poetry add numpy
-```
-
-start poetry
-```powershell
-poetry env activate
+poetry install --no-root
 ```
 
 Poetry shell Plugin installiern
@@ -48,4 +39,16 @@ poetry self add poetry-plugin-shell
 Poetry Umgebung starten
 ```powershell
 poetry shell
+```
+----------------------------------------------------------------------------------------
+### nicht wichtig für die instalation
+
+Abhängigkeit hinzufügen (nur wenn neue Abhängigkeit verwändet werden)
+```powershell
+poetry add numpy
+```
+
+start poetry
+```powershell
+poetry env activate
 ```
