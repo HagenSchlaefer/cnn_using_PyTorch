@@ -24,7 +24,7 @@ poetry instaliern
 ```powershell
 (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
 ```
-eventuell poetry Pfad unter Umgebungsvariablen → PATH angeben ("C:\Users\\<NAME>\AppData\Roaming\Python\Scripts")
+eventuell poetry Pfad unter Umgebungsvariablen → PATH angeben ("C:\Users\<NAME>\AppData\Roaming\Python\Scripts")
 
 Virtuelle Poetry umgebung instalieren
 ```powershell
