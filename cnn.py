@@ -103,4 +103,20 @@ def run(model, device, image_path):
         pred = torch.argmax(output, dim=1)
         return pred.item(), model
     
-    
+def test(model, device, test_images, test_labels):
+# Test the model
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        images = torch.from_numpy(test_images).float().to(device)
+        labels = torch.from_numpy(test_labels).to(device)
+
+        outputs = model(images)
+        _, predicted = torch.max(outputs, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+    accuracy = 100 * correct / total if total > 0 else 0
+    print(f'Test Accuracy: {accuracy:.2f}%')
+    return accuracy   
