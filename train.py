@@ -3,45 +3,71 @@ import torch
 import torch.nn as nn
 
 from MyCnn import ConvNet
-from myCnn2 import ConvNet as ConvNet2
+from myCnn3 import ConvNet as ConvNet3
 from cnn import train, plot_metrics, run
-from data import save_activations, visualize_activations
+from data import get_activation, load_emnist_mapping, save_activations, visualize_activations
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Hyper-parameters 
-num_epochs = 15
-batch_size = 64
-learning_rate = 0.001
+num_epochs = 30
+batch_size = 256
+learning_rate = 0.0001
+
+# Dictionary to store activations
+activations = {}
 
 #model = ConvNet().to(device)
-model = ConvNet2().to(device)
+model = ConvNet3().to(device)
 loss_F = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
 # Train the model
-losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size)
-plot_metrics(losses, accuracies, num_epochs)
+# losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size)
+# plot_metrics(losses, accuracies, num_epochs)
+
+
 
 # # Test the model
-# model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
-# model.eval()
 
-# img_path = f"../TestData/hina9.png"
-# pred, model = run(model, device, img_path)
-# print(f"Predicted label: {pred}")
+# Load the trained model
+model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
+model.eval()
 
-# # visualize_activations(model.conv1_x, "conv1")
-# # visualize_activations(model.convStride1_x, "convStride1")
-# # visualize_activations(model.conv2_x, "conv2")
-# # visualize_activations(model.convStride2_x, "convStride2")
+# register hooks to capture activations
+model.conv1.register_forward_hook(get_activation(activations, "conv1"))
+model.bn1.register_forward_hook(get_activation(activations, "bn1"))
+model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
+model.bn2.register_forward_hook(get_activation(activations, "bn2"))
+model.convStride2.register_forward_hook(get_activation(activations, "convStride2"))
+model.bn3.register_forward_hook(get_activation(activations, "bn3"))
+model.conv2.register_forward_hook(get_activation(activations, "conv2"))
+model.bn4.register_forward_hook(get_activation(activations, "bn4"))
 
-# # visualize_activations(model.view_x, "flatten")
-# # visualize_activations(model.fc1_x, "fc1")
-# # visualize_activations(model.fc2_x, "fc2")
-# # visualize_activations(model.fc3_x, "fc3")
+model.fc1.register_forward_hook(get_activation(activations, "fc1"))
+model.fc2.register_forward_hook(get_activation(activations, "fc2"))
+model.fc3.register_forward_hook(get_activation(activations, "fc3"))
+
+#forward pass a test image
+img_path = f"../TestData/a.png"
+pred, model = run(model, device, img_path)
+#output the predicted label
+# mapping of EMNIST labels
+mapping = load_emnist_mapping()
+print(f"Predicted label: {pred}")
+print(f"Predicted label: {mapping[pred]}")
+
+visualize_activations(activations["conv1"], "conv1")
+visualize_activations(activations["convStride1"], "convStride1")
+visualize_activations(activations["conv2"], "conv2")
+visualize_activations(activations["convStride2"], "convStride2")
+
+#visualize_activations(mapping[activations["flatten"]], "flatten")
+visualize_activations(activations["fc1"], "fc1")
+visualize_activations(activations["fc2"], "fc2")
+visualize_activations(activations["fc3"], "fc3")
 
 # save_activations(model.conv1_x, "1_conv1")
 # save_activations(model.convStride1_x, "2_convStride1")

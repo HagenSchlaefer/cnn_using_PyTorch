@@ -7,6 +7,16 @@ from torchvision import transforms
 import cv2
 import os
 
+from torchvision.datasets import EMNIST
+from torchvision import transforms
+
+# EMNIST(
+#     root="data",
+#     split="balanced",
+#     train=True,
+#     download=True
+# )
+
 
 def load_mnist_cnn():
     # load MNIST data from local npz file
@@ -24,6 +34,45 @@ def load_mnist_cnn():
     labels = labels.astype(np.int64)
 
     return images, labels
+
+def load_emnist_cnn():
+# load EMNIST balanced split data from torchvision.datasets
+    transform = transforms.Compose([
+        transforms.ToTensor(),                                                  # -> [0,1], shape (1,28,28)
+        transforms.Lambda(lambda x: torch.rot90(x, 3, [1,2]).contiguous()),     # rotate 3x90 degrees = -90 degrees
+        transforms.Lambda(lambda x: torch.flip(x, [2]))                         # flip horizontal
+    ])
+
+    dataset = EMNIST(
+        root="data",
+        split="balanced",
+        train=True,
+        download=False,
+        transform=transform
+    )                           # dataset of PIL images and labels
+
+    images = []
+    labels = []
+
+    for img, label in dataset:
+        images.append(img.numpy())  # (1,28,28)
+        labels.append(label)        # int (0-46)
+
+    images = np.stack(images).astype("float32")   # (N,1,28,28)
+    labels = np.array(labels, dtype=np.int64)
+
+    return images, labels
+
+def load_emnist_mapping():
+    path = r"data/EMNIST/raw/emnist-balanced-mapping.txt"
+    mapping = {}
+
+    with open(path) as f:
+        for line in f:
+            key, val = line.split()
+            mapping[int(key)] = chr(int(val))
+
+    return mapping
 
 def batch_generator_augmented(images, labels, batch_size=64, shuffle=True, augment=True):
 # generate batches with optional data augmentation
@@ -93,6 +142,11 @@ def prep_image(image_path):
     img = img.astype(np.float32)
     
     return img
+
+def get_activation(activations, name):
+    def hook(model, input, output):
+        activations[name] = output.detach()
+    return hook
 
 def normalize_per_channel(x):
     # x: (C, H, W)
