@@ -1,4 +1,4 @@
-# MyCnn.py
+# MyCnn2.py
 import torch.nn as nn
 import torch.nn.functional as F
 
