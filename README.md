@@ -30,15 +30,6 @@ Virtuelle Poetry umgebung instalieren
 ```powershell
 poetry install
 ```
-Abhängigkeit hinzufügen (nur wenn neue Abhängigkeit verwändet werden)
-```powershell
-poetry add numpy
-```
-
-start poetry
-```powershell
-poetry env activate
-```
 
 Poetry shell Plugin installiern
 ```powershell
@@ -48,4 +39,16 @@ poetry self add poetry-plugin-shell
 Poetry Umgebung starten
 ```powershell
 poetry shell
+```
+----------------------------------------------------------------------------------------
+### nicht wichtig für die instalation
+
+Abhängigkeit hinzufügen (nur wenn neue Abhängigkeit verwändet werden)
+```powershell
+poetry add numpy
+```
+
+start poetry
+```powershell
+poetry env activate
 ```
