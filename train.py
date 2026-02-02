@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from MyCnn import ConvNet
 from myCnn3 import ConvNet as ConvNet3
-from cnn import train, plot_metrics, run
+from cnn import test, train, plot_metrics, run
 from data import get_activation, load_emnist_mapping, save_activations, visualize_activations
 
 # Device configuration
@@ -36,7 +36,9 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
 model.eval()
 
-# register hooks to capture activations
+#test(model, device)
+
+#register hooks to capture activations
 model.conv1.register_forward_hook(get_activation(activations, "conv1"))
 model.bn1.register_forward_hook(get_activation(activations, "bn1"))
 model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
@@ -51,9 +53,9 @@ model.fc2.register_forward_hook(get_activation(activations, "fc2"))
 model.fc3.register_forward_hook(get_activation(activations, "fc3"))
 
 #forward pass a test image
-img_path = f"../TestData/a.png"
+img_path = f"../TestData/cklein.png"
 pred, model = run(model, device, img_path)
-#output the predicted label
+# output the predicted label
 # mapping of EMNIST labels
 mapping = load_emnist_mapping()
 print(f"Predicted label: {pred}")
