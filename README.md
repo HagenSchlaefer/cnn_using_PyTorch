@@ -28,7 +28,7 @@ eventuell poetry Pfad unter Umgebungsvariablen → PATH angeben ("C:\Users\<NAME
 
 Virtuelle Poetry umgebung instalieren
 ```powershell
-poetry install
+poetry install --no-root
 ```
 
 Poetry shell Plugin installiern
