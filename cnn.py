@@ -102,20 +102,34 @@ def run(model, device, image_path):
         output = model(image)
         pred = torch.argmax(output, dim=1)
         return pred.item(), model
-    
-def test(model, device, test_images, test_labels):
+
+
+def test(model, device):
 # Test the model
+
+    # get mnist test data
+    images_cnn, labels_cnn = load_emnist_cnn(train=False)
+    #print(images_cnn.shape)  # (18800, 1, 28, 28)
+    #print(labels_cnn.shape)  # (18800,)
+
     model.eval()
     correct = 0
     total = 0
     with torch.no_grad():
-        images = torch.from_numpy(test_images).float().to(device)
-        labels = torch.from_numpy(test_labels).to(device)
+        images = torch.from_numpy(images_cnn).float().to(device)
+        labels = torch.from_numpy(labels_cnn).to(device)
 
         outputs = model(images)
         _, predicted = torch.max(outputs, 1)
         total += labels.size(0)
+        print(total)
         correct += (predicted == labels).sum().item()
+
+        # # Uncomment to see misclassified examples
+        #mapping = load_emnist_mapping()
+        # for i in range(total):
+        #     if predicted[i] != labels[i]:
+        #         print(f'Label: {mapping[int(labels[i].item())]}\t| Prediction: {mapping[int(predicted[i].item())]}')
 
     accuracy = 100 * correct / total if total > 0 else 0
     print(f'Test Accuracy: {accuracy:.2f}%')

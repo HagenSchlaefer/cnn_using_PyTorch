@@ -24,52 +24,52 @@ loss_F = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
-# Train the model
+# # Train the model
 # losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size)
 # plot_metrics(losses, accuracies, num_epochs)
 
-
-
-# # Test the model
 
 # Load the trained model
 model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
 model.eval()
 
-#test(model, device)
+# # Test the model with EMNIST test dataset
+test(model, device)
+
+# # Run the model
 
 #register hooks to capture activations
-model.conv1.register_forward_hook(get_activation(activations, "conv1"))
-model.bn1.register_forward_hook(get_activation(activations, "bn1"))
-model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
-model.bn2.register_forward_hook(get_activation(activations, "bn2"))
-model.convStride2.register_forward_hook(get_activation(activations, "convStride2"))
-model.bn3.register_forward_hook(get_activation(activations, "bn3"))
-model.conv2.register_forward_hook(get_activation(activations, "conv2"))
-model.bn4.register_forward_hook(get_activation(activations, "bn4"))
+# model.conv1.register_forward_hook(get_activation(activations, "conv1"))
+# model.bn1.register_forward_hook(get_activation(activations, "bn1"))
+# model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
+# model.bn2.register_forward_hook(get_activation(activations, "bn2"))
+# model.convStride2.register_forward_hook(get_activation(activations, "convStride2"))
+# model.bn3.register_forward_hook(get_activation(activations, "bn3"))
+# model.conv2.register_forward_hook(get_activation(activations, "conv2"))
+# model.bn4.register_forward_hook(get_activation(activations, "bn4"))
 
-model.fc1.register_forward_hook(get_activation(activations, "fc1"))
-model.fc2.register_forward_hook(get_activation(activations, "fc2"))
-model.fc3.register_forward_hook(get_activation(activations, "fc3"))
+# model.fc1.register_forward_hook(get_activation(activations, "fc1"))
+# model.fc2.register_forward_hook(get_activation(activations, "fc2"))
+# model.fc3.register_forward_hook(get_activation(activations, "fc3"))
 
-#forward pass a test image
-img_path = f"../TestData/cklein.png"
-pred, model = run(model, device, img_path)
-# output the predicted label
-# mapping of EMNIST labels
-mapping = load_emnist_mapping()
-print(f"Predicted label: {pred}")
-print(f"Predicted label: {mapping[pred]}")
+# #forward pass a test image
+# img_path = f"../TestData/L.png"
+# pred, model = run(model, device, img_path)
+# # output the predicted label
+# # mapping of EMNIST labels
+# mapping = load_emnist_mapping()
+# print(f"Predicted label: {pred}")
+# print(f"Predicted label: {mapping[pred]}")
 
-visualize_activations(activations["conv1"], "conv1")
-visualize_activations(activations["convStride1"], "convStride1")
-visualize_activations(activations["conv2"], "conv2")
-visualize_activations(activations["convStride2"], "convStride2")
+# visualize_activations(activations["conv1"], "conv1")
+# visualize_activations(activations["convStride1"], "convStride1")
+# visualize_activations(activations["conv2"], "conv2")
+# visualize_activations(activations["convStride2"], "convStride2")
 
-#visualize_activations(mapping[activations["flatten"]], "flatten")
-visualize_activations(activations["fc1"], "fc1")
-visualize_activations(activations["fc2"], "fc2")
-visualize_activations(activations["fc3"], "fc3")
+# #visualize_activations(mapping[activations["flatten"]], "flatten")
+# visualize_activations(activations["fc1"], "fc1")
+# visualize_activations(activations["fc2"], "fc2")
+# visualize_activations(activations["fc3"], "fc3")
 
 # save_activations(model.conv1_x, "1_conv1")
 # save_activations(model.convStride1_x, "2_convStride1")
