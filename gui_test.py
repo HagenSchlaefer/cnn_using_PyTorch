@@ -20,42 +20,46 @@ class MainWindow(QMainWindow):
         label = QLabel("One")
         label.setAlignment(Qt.AlignCenter)
 
-        button1 = QPushButton("Click Me")
-        button1.clicked.connect(self.do_something)
+        button = QPushButton("Click Me")
 
-        button2 = QPushButton("Click Me")
-        button2.clicked.connect(lambda: print("Button 2 clicked!"))
+        line_edit = QLineEdit()
+        text_edit = QTextEdit()
+
+        combobox = QComboBox()
+        combobox.addItems(["Option 1", "Option 2", "Option 3"]) 
 
         listwidget = QListWidget()
         listwidget.addItems(["Item 1", "Item 2", "Item 3"])
 
-        listwidget.itemClicked.connect(lambda item: print("List item clicked:", item.text()))   
-        listwidget.itemDoubleClicked.connect(lambda item: print("List item double-clicked:", item.text()))  
+
+        checkbox1 = QCheckBox("Checkbox 1")
+        checkbox2 = QCheckBox("Checkbox 2")
+        checkbox3 = QCheckBox("Checkbox 3")
+
+        inner_layout.addWidget(checkbox1)
+        inner_layout.addWidget(checkbox2)
+        inner_layout.addWidget(checkbox3)
 
         radio1 = QRadioButton("Radio 1")
         radio2 = QRadioButton("Radio 2")
         radio3 = QRadioButton("Radio 3")
 
-        for r in (radio1, radio2, radio3):
-            r.toggled.connect(self.radio_changed)
-
         inner_layout.addWidget(radio1)
         inner_layout.addWidget(radio2)
         inner_layout.addWidget(radio3)
 
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(0, 100)
+
         layout.addWidget(label)
-        layout.addWidget(button1)
-        layout.addWidget(button2)   
+        layout.addWidget(button)
+        layout.addWidget(line_edit)
+        layout.addWidget(text_edit)
+        layout.addWidget(combobox)
         layout.addWidget(listwidget)
         layout.addWidget(inner_container)
+        layout.addWidget(slider)
 
-    def do_something(self):
-        print("Button clicked!")
-
-    def radio_changed(self):
-        r = self.sender()
-        if r.isChecked():
-            print("Radio button was checked:", r.text())
      
         
   
