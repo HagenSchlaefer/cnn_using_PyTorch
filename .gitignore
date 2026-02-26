@@ -1,0 +1,16 @@
+# Ignore datasets
+data/
+*.gz
+# *.zip
+
+# # PyTorch models
+# *.pt
+# *.pth
+
+# # Python
+# __pycache__/
+# *.pyc
+
+# # Environments
+# .venv/
+# env/
