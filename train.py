@@ -1,4 +1,6 @@
 #train.py
+
+#train and test the CNN model
 import torch
 import torch.nn as nn
 
@@ -25,12 +27,13 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
 # # Train the model
-# losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size)
+# modelName like MINIST-CNN, EMNIST-letters-CNN, EMNIST-balanced-CNN
+# losses, accuracies = train(model, device, loss_F, optimizer, num_epochs, batch_size, modelName=f'cnn_epoch{num_epochs}')
 # plot_metrics(losses, accuracies, num_epochs)
 
 
 # Load the trained model
-model.load_state_dict(torch.load(f'cnn_epoch{num_epochs}.pth'))
+model.load_state_dict(torch.load("EMNIST-balanced-CNN.pth"))
 model.eval()
 
 # # Test the model with EMNIST test dataset
@@ -71,6 +74,7 @@ test(model, device)
 # visualize_activations(activations["fc2"], "fc2")
 # visualize_activations(activations["fc3"], "fc3")
 
+# labeld so that they can be easily identified in the visualization
 # save_activations(model.conv1_x, "1_conv1")
 # save_activations(model.convStride1_x, "2_convStride1")
 # save_activations(model.conv2_x, "3_conv2")

@@ -16,7 +16,7 @@ from data import batch_generator_augmented, load_emnist_cnn, load_emnist_mapping
 
 
 
-def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
+def train(model, device, loss_fn, optimizer, num_epochs, batch_size, modelName="cnn"):
 # Train the model
     
     # get mnist training data
@@ -64,7 +64,7 @@ def train(model, device, loss_fn, optimizer, num_epochs, batch_size):
               f'Accuracy: {accuracy:.2f}%')
 
     print('Finished Training')
-    torch.save(model.state_dict(), f'cnn_epoch{epoch+1}.pth')
+    torch.save(model.state_dict(), f'{modelName}.pth')
     return epoch_losses, epoch_accuracies
 
 def plot_metrics(losses, accuracies, num_epochs):
@@ -94,7 +94,7 @@ def run(model, device, image_path):
         print("Failed to preprocess image.")
         return None
     
-    show_image(image[0])  # show the preprocessed image
+    #show_image(image[0])  # show the preprocessed image
 
     model.eval()
     with torch.no_grad():

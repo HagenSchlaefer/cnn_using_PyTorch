@@ -11,7 +11,7 @@ from torchvision.datasets import EMNIST
 from torchvision import transforms
 
 # EMNIST(
-#     root="data",
+#     root="data2",
 #     split="balanced",
 #     train=True,
 #     download=True
@@ -63,8 +63,7 @@ def load_emnist_cnn(train=True):
 
     return images, labels
 
-def load_emnist_mapping():
-    path = r"data/EMNIST/raw/emnist-balanced-mapping.txt"
+def load_emnist_mapping(path = r"data/EMNIST/raw/emnist-balanced-mapping.txt"):
     mapping = {}
 
     with open(path) as f:
