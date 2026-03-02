@@ -52,3 +52,17 @@ start poetry
 ```powershell
 poetry env activate
 ```
+
+----------------------------------------------------------------------------------------
+### EMINIST Datensätze herunterladen
+
+Für das Training mit anderen Datensätzen müssen zuerst die .gz-Dateien heruntergeladen werden.
+
+```python
+EMNIST(
+    root="data2",
+    split="balanced",
+    train=True,
+    download=True
+)
+```
