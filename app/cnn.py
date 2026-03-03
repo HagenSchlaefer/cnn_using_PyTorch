@@ -103,6 +103,13 @@ def run(model, device, image_path):
         pred = torch.argmax(output, dim=1)
         return pred.item(), model
 
+def test_input_image(image_path):
+    image = prep_image(image_path)
+    if image is None:
+        print("Failed to preprocess image.")
+        return None
+    
+    show_image(image[0]) 
 
 def test(model, device):
 # Test the model

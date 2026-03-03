@@ -1,37 +1,33 @@
-# MyCnn.py
+# MyCnn2.py
 import torch.nn as nn
 import torch.nn.functional as F
 
 class ConvNet(nn.Module):
     def __init__(self):
         super(ConvNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 2, 3, padding=1)      # input channels=1, output channels=2, kernel size=3, padding=1 (28x28 -> 28x28)
-        self.pool1 = nn.MaxPool2d(2, 2)                 # 2x2 max pooling (28x28 -> 14x14) 
-        self.conv2 = nn.Conv2d(2, 4, 3, padding=1)      # input channels=2, output channels=4, kernel size=3, padding=1 (14x14 -> 14x14)
-        self.pool2 = nn.MaxPool2d(2, 2)                 # 2x2 max pooling (14x14 -> 7x7) 
-        self.conv3 = nn.Conv2d(4, 8, 3, padding=1)      # input channels=4, output channels=8, kernel size=3, padding=1 (7x7 -> 7x7)
-        self.fc1 = nn.Linear(8 * 7 * 7, 512)            # 392 = 8*7*7  
-        self.fc2 = nn.Linear(512, 256)                  # hidden layer
-        self.fc3 = nn.Linear(256, 10)                   # output layer for 10 classes
+        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)                     # input channels=1, output channels=16, kernel size=3, padding=1 (28x28 -> 28x28)
+        self.convStride1 = nn.Conv2d(16, 32, 3, stride=2, padding=1)    # input channels=16, output channels=32, kernel size=2, stride=2, padding=1 (28x28 -> 14x14) 
+        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)                    # input channels=32, output channels=64, kernel size=3, padding=1 (14x14 -> 14x14)
+        self.convStride2 = nn.Conv2d(64, 128, 3, stride=2, padding=1)   # input channels=64, output channels=128, kernel size=2, stride=2, padding=1 (7x7 -> 7x7)
+        self.fc1 = nn.Linear(128 * 7 * 7, 512)                          # 6272 = 128*7*7  
+        self.fc2 = nn.Linear(512, 256)                                  # hidden layer
+        self.fc3 = nn.Linear(256, 10)                                   # output layer for 10 classes
 
     def forward(self, x):
         # -> n, 1, 28, 28
-        conv1 = F.relu(self.conv1(x))                   # -> n, 2, 28, 28
+        conv1 = F.relu(self.conv1(x))                   # -> n, 16, 28, 28
         self.conv1_x = conv1.detach()
 
-        pool1 = self.pool1(conv1)                       # -> n, 2, 14, 14
-        self.pool1_x = pool1.detach()
+        convStride1 = self.convStride1(conv1)           # -> n, 32, 14, 14
+        self.convStride1_x = convStride1.detach()
 
-        conv2 = F.relu(self.conv2(pool1))               # -> n, 4, 14, 14
+        conv2 = F.relu(self.conv2(convStride1))         # -> n, 64, 14, 14
         self.conv2_x = conv2.detach()
 
-        pool2 = self.pool2(conv2)                       # -> n, 4, 7, 7
-        self.pool2_x = pool2.detach()
+        convStride2 = self.convStride2(conv2)           # -> n, 128, 7, 7
+        self.convStride2_x = convStride2.detach()
 
-        conv3 = F.relu(self.conv3(pool2))               # -> n, 8, 7, 7
-        self.conv3_x = conv3.detach()
-
-        view = conv3.view(-1, 8 * 7 * 7)                # -> n, 392
+        view = convStride2.view(-1, 128 * 7 * 7)        # -> n, 6272
         self.view_x = view.detach()
 
         fc1 = F.relu(self.fc1(view))                    # -> n, 512

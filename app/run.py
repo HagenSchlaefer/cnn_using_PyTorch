@@ -13,6 +13,8 @@ from .cnn import run
 from .data import get_activation, load_emnist_mapping, save_activations, visualize_activations
 
 def run_EMINIST_balanced():
+    #run the EMNIST balanced model on the input image and return the predicted label
+
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -65,6 +67,8 @@ def run_EMINIST_balanced():
 
 
 def run_EMINIST_letters():
+    #run the EMNIST letters model on the input image and return the predicted label
+
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -117,6 +121,8 @@ def run_EMINIST_letters():
 
 
 def run_MNIST():
+    #run the MNIST model on the input image and return the predicted label
+
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -124,11 +130,11 @@ def run_MNIST():
     activations = {}
 
     # initialize the model
-    model = ConvNet3().to(device)
+    model = ConvNet1().to(device)
 
     # Load the trained model
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    model_path = os.path.join(BASE_DIR, "models", "EMNIST-balanced-CNN.pth")
+    model_path = os.path.join(BASE_DIR, "models", "MNIST-CNN.pth")
 
     model.load_state_dict(torch.load(model_path))
     model.eval()
@@ -138,13 +144,9 @@ def run_MNIST():
 
     #register hooks to capture activations
     model.conv1.register_forward_hook(get_activation(activations, "conv1"))
-    model.bn1.register_forward_hook(get_activation(activations, "bn1"))
     model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
-    model.bn2.register_forward_hook(get_activation(activations, "bn2"))
     model.conv2.register_forward_hook(get_activation(activations, "conv2"))
-    model.bn3.register_forward_hook(get_activation(activations, "bn3"))
     model.convStride2.register_forward_hook(get_activation(activations, "convStride2"))
-    model.bn4.register_forward_hook(get_activation(activations, "bn4"))
 
     model.fc1.register_forward_hook(get_activation(activations, "fc1"))
     model.fc2.register_forward_hook(get_activation(activations, "fc2"))
@@ -166,3 +168,5 @@ def run_MNIST():
 
     # mapping of EMNIST labels
     return mapping[pred]
+
+run_EMINIST_balanced()

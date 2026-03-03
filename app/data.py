@@ -1,3 +1,5 @@
+import shutil
+
 import numpy as np
 import pathlib
 import matplotlib.pyplot as plt
@@ -103,14 +105,14 @@ def batch_generator_augmented(images, labels, batch_size=64, shuffle=True, augme
         yield batch_imgs, batch_lbls
 
 
-def show_image(img):
+def show_image(img, block=True):
     # img size (1, 28, 28) oder (28, 28)
     if img.ndim == 3:
         img = img[0]  # delete channel dimension
 
     plt.imshow(img, cmap="gray")
     plt.axis("off")
-    plt.show()
+    plt.show(block=block)
 
 def show_feature_maps(feature_maps):
 #view all feature maps in a grid
@@ -200,6 +202,19 @@ def visualize_activations(x, name="layer"):
 
     else:
         print(f"{name}: unsupported shape {x.shape}")
+
+def clear_dir_safe(out_dir="outputs"):
+    if os.path.exists(out_dir):
+        for f in os.listdir(out_dir):
+            fp = os.path.join(out_dir, f)
+            try:
+                if os.path.isfile(fp):
+                    os.remove(fp)
+                elif os.path.isdir(fp):
+                    shutil.rmtree(fp)
+            except PermissionError:
+                # Windows blocks files that are open in another program, ignore those
+                pass
 
 def save_activations(x, name="layer", out_dir="outputs"):
 

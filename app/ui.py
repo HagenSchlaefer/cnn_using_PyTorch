@@ -1,14 +1,23 @@
+#ui.py
+
+from pdb import pm
+
+from PIL import Image
+import io
+import os
+import sys
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider
+    QApplication, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton
 )
 
-from .run import run_EMINIST_balanced
+from app.data import clear_dir_safe
 
-import sys
-import os
+from .run import run_EMINIST_balanced, run_EMINIST_letters, run_MNIST
+from .cnn import test_input_image
+
 
 # PaintArea: Widget to draw on, using mouse events to create a simple painting application.
 class PaintArea(QWidget):
@@ -81,7 +90,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("CNN-GUI")
 
         self.last_saved_path = None
-        self.selected_model = None
+        self.selected_model = "MINIST-CNN"  # default model
+
+        self.pixmap_cache = {}  # key = filename, value = QPixmap
         
         # Container
         container = QWidget()
@@ -132,10 +143,13 @@ class MainWindow(QMainWindow):
 
         exitAction = fileMenu.addAction("Exit")
         exitAction.triggered.connect(self.close)
-        run_action = fileMenu.addAction("Run")
-        run_action.triggered.connect(self.run)
         clear_action = fileMenu.addAction("Clear")
         clear_action.triggered.connect(self.paint_area.clear)
+        run_action = fileMenu.addAction("Run")
+        run_action.triggered.connect(self.run)
+        testInput_action = fileMenu.addAction("Test Image")
+        testInput_action.triggered.connect(self.testImage)
+       
         
         aboutAction = helpMenu.addAction("About")
         aboutAction.triggered.connect(lambda: QMessageBox.information(self, "Info", "CNN using PyTorch to classify MNIST data."))
@@ -144,14 +158,18 @@ class MainWindow(QMainWindow):
         self.prediction_label = QLabel("Prediction: None")
         self.prediction_label.setAlignment(Qt.AlignCenter)
 
+        # temp_button = QPushButton("Test Image")
+        # temp_button.clicked.connect(self.testImage)
+        
+
         # Toolbar
         toolbar = QToolBar("Toolbar")
         self.addToolBar(toolbar)
 
         # Toolbar-Action: select color
-        color_action = QAction("Color", self)
-        color_action.triggered.connect(self.choose_color)
-        toolbar.addAction(color_action)
+        # color_action = QAction("Color", self)
+        # color_action.triggered.connect(self.choose_color)
+        # toolbar.addAction(color_action)
 
         #not needed
         # Toolbar-Action: select pen width
@@ -160,7 +178,7 @@ class MainWindow(QMainWindow):
         # self.width_spin.setValue(3)
         # self.width_spin.valueChanged.connect(self.paint_area.set_pen_width)
         # toolbar.addWidget(self.width_spin)
-        self.paint_area.set_pen_width(32)  # default pen width
+        self.paint_area.set_pen_width(28)  # default pen width
 
         # Toolbar-Action: Clear canvas
         clear_action = QAction("Clear", self)
@@ -178,6 +196,7 @@ class MainWindow(QMainWindow):
         inner_layout_1.addWidget(radio3)
 
         inner_layout_2.addWidget(self.prediction_label)
+        #inner_layout_2.addWidget(temp_button)
 
         inner_layout_3.addWidget(self.paint_area)
         inner_layout_3.addWidget(self.outputs_label)
@@ -187,7 +206,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(inner_container_3)
         layout.addWidget(self.slider)
         
-        self.setFixedSize(600, 400)
+        #self.setFixedSize(600, 400)
+        self.resize(600, 400)
 
     # MainWindow-Methods
     def radio_changed(self):
@@ -230,26 +250,78 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Fehler beim Speichern: {e}")
             print("Fehler beim Speichern:", e)
 
-    def display_output(self):
+    def load_pixmap_from_file(self,path):
+
+        if path in self.pixmap_cache:
+            return self.pixmap_cache[path]
+        
+        with open(path, "rb") as f:
+            img_bytes = f.read()
+        pil_img = Image.open(io.BytesIO(img_bytes))
+        #pil_img = pil_img.convert("RGBA")
+        data = pil_img.tobytes("raw", "RGBA")
+        qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format_RGBA8888)
+        pm = QPixmap.fromImage(qimg)
+
+        self.pixmap_cache[path] = pm  # cache the pixmap for future use
+        return pm
+
+    def display_output_alt(self):
         os.makedirs("outputs", exist_ok=True)
 
         #number of output images in the "outputs" directory to set slider range
         num_outputs = len(os.listdir("outputs"))
-        self.slider.setRange(1, num_outputs)  #set range based on number of output images
+        self.slider.setRange(1, max(1, num_outputs))  #set range based on number of output images
 
         for name in os.listdir("outputs"):
             if name.endswith(".png"):
-                output_path = os.path.join("outputs", name)
                 identifier = name.split("_")[0]  # get the name without extension
                 if identifier == str(self.slider.value()):  # show the image corresponding to the slider value
-                    pm = QPixmap(output_path)
+                    output_path = os.path.join("outputs", name)
+
+                    # load the image and convert to RGBA
+                    with open(output_path, "rb") as f:
+                        img_bytes = f.read()
+                    pil_img = Image.open(io.BytesIO(img_bytes))
+                    pil_img = pil_img.convert("RGBA")  # sicherstellen, dass Format stimmt
+
+                    # convert PIL image to QPixmap
+                    data = pil_img.tobytes("raw", "RGBA")
+                    qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format_RGBA8888)
+                    pm = QPixmap.fromImage(qimg)
+
                     self.outputs_label.setPixmap(pm)
                     break
 
+    def display_output(self):
+        os.makedirs("outputs", exist_ok=True)
+
+        # Slider-Range einstellen
+        png_files = [f for f in os.listdir("outputs") if f.endswith(".png")]
+        num_outputs = len(png_files)
+        self.slider.setRange(1, max(1, num_outputs))
+
+        for name in png_files:
+            identifier = name.split("_")[0]
+            if identifier == str(self.slider.value()):
+                output_path = os.path.join("outputs", name)
+                pm = self.load_pixmap_from_file(output_path)
+                self.outputs_label.setPixmap(pm)
+                self.outputs_label.show()
+                break    
 
     def run(self):
         #save the current canvas as an image for CNN input
         self.save_image()
+        
+        # 1 alte Pixmaps freigeben
+        self.outputs_label.clear()
+        self.outputs_label.setPixmap(QPixmap())
+        self.pixmap_cache.clear()
+        QApplication.processEvents()  # Ressourcen freigeben
+
+        # delete old outputs and create new directory
+        clear_dir_safe("outputs")
 
         prediction = None
 
@@ -259,19 +331,27 @@ class MainWindow(QMainWindow):
         
         if self.selected_model == "MINIST-CNN":
             print("Running MINIST-CNN...")
-            #run_MINIST()
+            prediction = run_MNIST()
+            print("Prediction:", prediction)
+
         elif self.selected_model == "EMNIST-letters-CNN":
             print("Running EMNIST-letters-CNN...")
-            #run_EMINIST_letters()
+            prediction = run_EMINIST_letters()
+            print("Prediction:", prediction)
+
         elif self.selected_model == "EMNIST-balanced-CNN":
             print("Running EMNIST-balanced-CNN...")
             prediction = run_EMINIST_balanced()
             print("Prediction:", prediction)
 
         self.prediction_label.setText(f"Prediction: {prediction}")
+
+        self.slider.setValue(1)
         self.display_output()
 
-
+    def testImage(self):
+        self.save_image()
+        test_input_image("input/input.png")
 
 def main():
     app = QApplication(sys.argv)
