@@ -53,7 +53,7 @@ class PaintArea(QWidget):
     # save the canvas to a file
     def save_image(self, path: str):
         if not self.canvas.save(path):
-            raise RuntimeError("Bild konnte nicht gespeichert werden.")
+            raise RuntimeError("Picture could not be saved.")
 
     # paint event to draw the canvas
     def paintEvent(self, event):
@@ -108,6 +108,9 @@ class MainWindow(QMainWindow):
         inner_layout_2 = QHBoxLayout(inner_container_2)
         inner_layout_3 = QHBoxLayout(inner_container_3)
 
+        model_label = QLabel("Select Model:")
+        model_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+
         # Radio Buttons for model selection
         radio1 = QRadioButton("MINIST-CNN") # maybe later: "EMNIST-digits-CNN"
         radio1.setChecked(True)  # default selection
@@ -123,6 +126,11 @@ class MainWindow(QMainWindow):
         self.outputs_label = QLabel()
         self.outputs_label.setFixedSize(280, 280)
         self.outputs_label.setAlignment(Qt.AlignCenter)
+
+        # Layer Label
+        self.layer_label = QLabel("Layer of the CNN:")
+        self.layer_label.setAlignment(Qt.AlignCenter)
+        self.layer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
 
         # Slider for Output diashow
         self.slider = QSlider(Qt.Horizontal)
@@ -192,16 +200,19 @@ class MainWindow(QMainWindow):
         toolbar.addAction(run_action)
 
         # add widgets to the layouts
+        
         inner_layout_1.addWidget(radio1)
         inner_layout_1.addWidget(radio2)
         inner_layout_1.addWidget(radio3)
 
         inner_layout_2.addWidget(self.prediction_label)
+        inner_layout_2.addWidget(self.layer_label)
         #inner_layout_2.addWidget(temp_button)
 
         inner_layout_3.addWidget(self.paint_area)
         inner_layout_3.addWidget(self.outputs_label)
 
+        layout.addWidget(model_label)
         layout.addWidget(inner_container_1)
         layout.addWidget(inner_container_2)
         layout.addWidget(inner_container_3)
@@ -248,8 +259,8 @@ class MainWindow(QMainWindow):
             small.save(path)
             self.last_saved_path = path
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Fehler beim Speichern: {e}")
-            print("Fehler beim Speichern:", e)
+            QMessageBox.critical(self, "Error", f"Error saving image: {e}")
+            print("Error saving image:", e)
 
     def load_pixmap_from_file(self,path):
 
@@ -282,6 +293,8 @@ class MainWindow(QMainWindow):
                 pm = self.load_pixmap_from_file(output_path)
                 self.outputs_label.setPixmap(pm)
                 self.outputs_label.show()
+
+                self.layer_label.setText(f"Layer of the CNN: {name.split('_')[1].split('.')[0]}")  # update layer label
                 break    
 
     def run(self):
