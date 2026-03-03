@@ -1,7 +1,15 @@
-# Ignore datasets
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # data/
 *.gz
 *.zip
+
+# input and output files
+*.png
 
 # # PyTorch models
 # *.pt

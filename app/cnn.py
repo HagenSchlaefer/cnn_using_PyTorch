@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 
-from data import batch_generator_augmented, load_emnist_cnn, load_emnist_mapping, prep_image, show_image
+from .data import batch_generator_augmented, load_emnist_cnn, load_emnist_mapping, prep_image, show_image
 
 # #test loading data
 # # get mnist training data

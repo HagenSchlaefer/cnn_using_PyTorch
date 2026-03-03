@@ -1,13 +1,17 @@
 #train.py
 
 #train and test the CNN model
+import os
+
 import torch
 import torch.nn as nn
 
-from MyCnn import ConvNet
-from myCnn3 import ConvNet as ConvNet3
-from cnn import test, train, plot_metrics, run
-from data import get_activation, load_emnist_mapping, save_activations, visualize_activations
+from model_structures.MNIST_structure import ConvNet as ConvNet1
+# from model_structures.EMNIST_letters_structure import ConvNet as ConvNet2
+from model_structures.EMNIST_balanced_structure import ConvNet as ConvNet3
+
+from .cnn import test, train, plot_metrics, run
+from .data import get_activation, load_emnist_mapping, save_activations, visualize_activations
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -33,7 +37,10 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
 # Load the trained model
-model.load_state_dict(torch.load("EMNIST-balanced-CNN.pth"))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_path = os.path.join(BASE_DIR, "models", "EMNIST-balanced-CNN.pth")
+
+model.load_state_dict(torch.load(model_path))
 model.eval()
 
 # # Test the model with EMNIST test dataset

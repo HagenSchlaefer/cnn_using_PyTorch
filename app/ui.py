@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider
 )
 
-from run import run_EMINIST_balanced
+from .run import run_EMINIST_balanced
 
 import sys
 import os

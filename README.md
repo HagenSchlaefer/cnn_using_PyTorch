@@ -66,3 +66,9 @@ EMNIST(
     download=True
 )
 ```
+
+### App ausführen
+
+```powershell
+python -m app.ui
+```
