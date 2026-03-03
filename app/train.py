@@ -1,4 +1,13 @@
 #train.py
+# this file is used to train the CNN model on the MNIST and EMNIST datasets, and to test the model on the test dataset and input images.
+# It also includes code to visualize the activations of the layers for a given input image.
+
+# steps to train the model:
+# 1. Load the dataset (MNIST or EMNIST)
+# 2. Define the model architecture (ConvNet)
+# 3. Define the loss function and optimizer and hyperparameters
+# 4. Train the model for a specified number of epochs, and save the model weights
+# 5. Test the model on the test dataset and output the accuracy
 
 #train and test the CNN model
 import os
@@ -48,7 +57,7 @@ test(model, device)
 
 # # Run the model
 
-#register hooks to capture activations
+# #register hooks to capture activations
 # model.conv1.register_forward_hook(get_activation(activations, "conv1"))
 # model.bn1.register_forward_hook(get_activation(activations, "bn1"))
 # model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
@@ -67,10 +76,12 @@ test(model, device)
 # pred, model = run(model, device, img_path)
 # # output the predicted label
 # # mapping of EMNIST labels
+# #remember to change the mapping file if using the letters model
 # mapping = load_emnist_mapping()
 # print(f"Predicted label: {pred}")
 # print(f"Predicted label: {mapping[pred]}")
 
+# #visualize the activations of the layers for the test image
 # visualize_activations(activations["conv1"], "conv1")
 # visualize_activations(activations["convStride1"], "convStride1")
 # visualize_activations(activations["conv2"], "conv2")
@@ -81,34 +92,14 @@ test(model, device)
 # visualize_activations(activations["fc2"], "fc2")
 # visualize_activations(activations["fc3"], "fc3")
 
-# labeld so that they can be easily identified in the visualization
-# save_activations(model.conv1_x, "1_conv1")
-# save_activations(model.convStride1_x, "2_convStride1")
-# save_activations(model.conv2_x, "3_conv2")
-# save_activations(model.convStride2_x, "4_convStride2")
+# #save the activations of the layers for visualization
+# #labeld so that they can be easily identified in the visualization
+# save_activations(activations["conv1"], "1_conv1")
+# save_activations(activations["convStride1"], "2_convStride1")
+# save_activations(activations["conv2"], "3_conv2")
+# save_activations(activations["convStride2"], "4_convStride2")
 
-# save_activations(model.view_x, "5_flatten")
-# save_activations(model.fc1_x, "6_fc1")
-# save_activations(model.fc2_x, "7_fc2")
-# save_activations(model.fc3_x, "8_fc3")
+# save_activations(activations["fc1"], "5_fc1")
+# save_activations(activations["fc2"], "6_fc2")
+# save_activations(activations["fc3"], "7_fc3")
 
-# for i in range(10):
-#     if i == 4:
-#         for j in range(1):
-#             img_path = f"../TestData/{i}.png"
-#             pred, model = run(model, device, img_path)
-#             print(f"Image: {i}  Predicted label: {pred}")
-
-#             visualize_activations(model.conv1_x, "conv1")
-#             visualize_activations(model.convStride1_x, "convStride1")
-#             visualize_activations(model.conv2_x, "conv2")
-#             visualize_activations(model.convStride2_x, "convStride2")
-
-#             visualize_activations(model.view_x, "flatten")
-#             visualize_activations(model.fc1_x, "fc1")
-#             visualize_activations(model.fc2_x, "fc2")
-#             visualize_activations(model.fc3_x, "fc3")
-#             #print(f"Testing image of digit {i}, run {j+1}")
-#         j += 1
-    
-#     i += 1

@@ -69,6 +69,8 @@ def run_EMINIST_balanced():
 def run_EMINIST_letters():
     #run the EMNIST letters model on the input image and return the predicted label
 
+    # ENIST letters model is not implemented yet, so we will use the balanced model for demonstration!!!
+
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -86,6 +88,7 @@ def run_EMINIST_letters():
     model.eval()
 
     # load the EMNIST mapping to convert predicted labels to characters
+    # mapping = load_emnist_mapping(r"data\EMNIST\raw\emnist-letters-mapping.txt")
     mapping = load_emnist_mapping()
 
     #register hooks to capture activations
@@ -139,9 +142,6 @@ def run_MNIST():
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-    # load the EMNIST mapping to convert predicted labels to characters
-    mapping = load_emnist_mapping()
-
     #register hooks to capture activations
     model.conv1.register_forward_hook(get_activation(activations, "conv1"))
     model.convStride1.register_forward_hook(get_activation(activations, "convStride1"))
@@ -166,7 +166,7 @@ def run_MNIST():
     save_activations(activations["fc2"], "6_fc2")
     save_activations(activations["fc3"], "7_fc3")
 
-    # mapping of EMNIST labels
-    return mapping[pred]
+    # mapping of MNIST labels is just the digits 0-9, so we can directly return the predicted label
+    return pred
 
 run_EMINIST_balanced()

@@ -270,7 +270,7 @@ class MainWindow(QMainWindow):
     def display_output(self):
         os.makedirs("outputs", exist_ok=True)
 
-        # Slider-Range einstellen
+        # find all output images and update slider range
         png_files = [f for f in os.listdir("outputs") if f.endswith(".png")]
         num_outputs = len(png_files)
         self.slider.setRange(1, max(1, num_outputs))
@@ -288,7 +288,7 @@ class MainWindow(QMainWindow):
         #save the current canvas as an image for CNN input
         self.save_image()
         
-        # 1 alte Pixmaps freigeben
+        # clear old outputs and pixmap cache
         self.outputs_label.clear()
         self.outputs_label.setPixmap(QPixmap())
         self.pixmap_cache.clear()

@@ -37,7 +37,7 @@ def load_mnist_cnn():
 
     return images, labels
 
-def load_emnist_cnn(train=True):
+def load_emnist_cnn(split="balanced",train=True):
 # load EMNIST balanced split data from torchvision.datasets
     transform = transforms.Compose([
         transforms.ToTensor(),                                                  # -> [0,1], shape (1,28,28)
@@ -47,7 +47,7 @@ def load_emnist_cnn(train=True):
 
     dataset = EMNIST(
         root="data",
-        split="balanced",
+        split=split,
         train=train,
         download=False,
         transform=transform

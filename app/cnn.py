@@ -5,7 +5,7 @@ from .data import batch_generator_augmented, load_emnist_cnn, load_emnist_mappin
 
 # #test loading data
 # # get mnist training data
-# images_cnn, labels_cnn = load_emnist_cnn()
+# images_cnn, labels_cnn = load_emnist_cnn(""balanced", train=True)
 # # print(images_cnn.shape)  # (112800, 1, 28, 28)
 # # # print(labels_cnn.shape)  # (112800,)
 # mapping = load_emnist_mapping()
@@ -20,7 +20,7 @@ def train(model, device, loss_fn, optimizer, num_epochs, batch_size, modelName="
 # Train the model
     
     # get mnist training data
-    images_cnn, labels_cnn = load_emnist_cnn()
+    images_cnn, labels_cnn = load_emnist_cnn(split="balanced", train=True)
     # print(images_cnn.shape)  # (112800, 1, 28, 28)
     # print(labels_cnn.shape)  # (112800,)
 
@@ -115,7 +115,7 @@ def test(model, device):
 # Test the model
 
     # get mnist test data
-    images_cnn, labels_cnn = load_emnist_cnn(train=False)
+    images_cnn, labels_cnn = load_emnist_cnn(split="balanced", train=False)
     #print(images_cnn.shape)  # (18800, 1, 28, 28)
     #print(labels_cnn.shape)  # (18800,)
 
