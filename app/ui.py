@@ -157,6 +157,7 @@ class MainWindow(QMainWindow):
         # Prediction Label
         self.prediction_label = QLabel("Prediction: None")
         self.prediction_label.setAlignment(Qt.AlignCenter)
+        self.prediction_label.setStyleSheet("font-size: 16px; font-weight: bold;")
 
         # temp_button = QPushButton("Test Image")
         # temp_button.clicked.connect(self.testImage)
@@ -265,33 +266,6 @@ class MainWindow(QMainWindow):
 
         self.pixmap_cache[path] = pm  # cache the pixmap for future use
         return pm
-
-    def display_output_alt(self):
-        os.makedirs("outputs", exist_ok=True)
-
-        #number of output images in the "outputs" directory to set slider range
-        num_outputs = len(os.listdir("outputs"))
-        self.slider.setRange(1, max(1, num_outputs))  #set range based on number of output images
-
-        for name in os.listdir("outputs"):
-            if name.endswith(".png"):
-                identifier = name.split("_")[0]  # get the name without extension
-                if identifier == str(self.slider.value()):  # show the image corresponding to the slider value
-                    output_path = os.path.join("outputs", name)
-
-                    # load the image and convert to RGBA
-                    with open(output_path, "rb") as f:
-                        img_bytes = f.read()
-                    pil_img = Image.open(io.BytesIO(img_bytes))
-                    pil_img = pil_img.convert("RGBA")  # sicherstellen, dass Format stimmt
-
-                    # convert PIL image to QPixmap
-                    data = pil_img.tobytes("raw", "RGBA")
-                    qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format_RGBA8888)
-                    pm = QPixmap.fromImage(qimg)
-
-                    self.outputs_label.setPixmap(pm)
-                    break
 
     def display_output(self):
         os.makedirs("outputs", exist_ok=True)
