@@ -249,7 +249,7 @@ def save_activations_olt(
         plt.imsave(os.path.join(out_dir, f"{name}.png"), grid)
         plt.close()
 
-def save_activations(
+def save_activations_good(
     x: torch.Tensor,
     name: str = "layer",
     out_dir: str = "outputs",
@@ -332,6 +332,121 @@ def save_activations(
         return
     # ----------------------------------------
     print(f"{name}: unsupported shape {tuple(x.shape)}")
+
+def save_activations(
+    x: torch.Tensor,
+    name: str = "layer",
+    out_dir: str = "outputs",
+    normalize: bool = True,
+    padding: int = 1,
+    image_size: int = 280,
+    show_x_labels: bool = False
+):
+    os.makedirs(out_dir, exist_ok=True)
+
+    if not isinstance(x, torch.Tensor):
+        raise TypeError(f"x muss torch.Tensor sein, bekam {type(x)}")
+
+    x = x.detach().cpu()
+
+    # ============================================================
+    # CONV FEATURE MAPS (B,C,H,W)
+    # ============================================================
+    if x.dim() == 4:
+
+        maps = x[0]  # (C,H,W)
+
+        if normalize:
+            maps = normalize_per_channel(maps)
+            pad_value = 0.0
+        else:
+            pad_value = maps.min().item()
+
+        maps = maps.unsqueeze(1)
+
+        num_maps = maps.shape[0]
+        ncols = math.ceil(math.sqrt(num_maps))
+
+        grid = torchvision.utils.make_grid(
+            maps,
+            nrow=ncols,
+            padding=padding,
+            pad_value=pad_value
+        )
+
+        grid = grid.permute(1, 2, 0).numpy()
+
+        fig = plt.figure(figsize=(image_size/50, image_size/50), dpi=100)
+        plt.imshow(grid, cmap="gray")
+        plt.axis("off")
+
+        plt.savefig(
+            os.path.join(out_dir, f"{name}.png"),
+            bbox_inches="tight",
+            pad_inches=0
+        )
+
+        plt.close()
+        return
+
+
+    # ============================================================
+    # FC LAYER (B,N)
+    # ============================================================
+    if x.dim() == 2:
+
+        vec = x[0].float().numpy()
+        N = vec.shape[0]
+
+        if normalize:
+            vmin, vmax = vec.min(), vec.max()
+            vec = (vec - vmin) / (max(vmax - vmin, 1e-6))
+
+        fig, ax = plt.subplots(
+            figsize=(image_size/100, image_size/100),
+            dpi=100
+        )
+
+        x_idx = np.arange(N)
+
+        ax.bar(
+            x_idx,
+            vec,
+            width=0.5,
+            color="#4c78a8",
+            edgecolor="black",
+            linewidth=0.5
+        )
+
+        #ax.set_title(name, fontsize=10)
+
+        ax.set_xlim(-0.5, N - 0.5)
+        ax.set_ylim(0, max(vec.max()*1.1, 1e-3))
+
+        ax.grid(axis="y", linestyle="--", alpha=0.3)
+
+    # -------------------------------------------------
+    # X LABELS optional
+    # -------------------------------------------------
+    if show_x_labels:
+        ax.set_xlabel("Class")
+        ax.set_xticks(x_idx)
+        ax.set_xticklabels([str(i) for i in x_idx], rotation=45, fontsize=8)
+    else:
+        ax.set_xticks([])
+
+    ax.set_ylabel("Activation" if not normalize else "Activation (norm)")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(out_dir, f"{name}.png"),
+        bbox_inches="tight",
+        pad_inches=0.05
+    )
+
+    plt.close()
+    return
 
 #XX
 def show_activations_animated(

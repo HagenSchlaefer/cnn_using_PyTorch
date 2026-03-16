@@ -4,3 +4,6 @@ todo.txt
 2. Eventuell Histogramm der Features -> dafür müste man die vergangenen Layer-Outputs speichern
 3. skalierung und ordsabhänigkeiten der gui überarbeiten
 bessere gui aufruf main
+
+
+in der x achsen beschriftung das jeweilige maping einfügen damit man es besser lesen kann und man immer nur ein zeichen hat!!
