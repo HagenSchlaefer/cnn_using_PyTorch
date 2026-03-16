@@ -3,3 +3,4 @@ todo.txt
 1. Animaton der Layer
 2. Eventuell Histogramm der Features -> dafür müste man die vergangenen Layer-Outputs speichern
 3. skalierung und ordsabhänigkeiten der gui überarbeiten
+bessere gui aufruf main
