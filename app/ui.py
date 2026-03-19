@@ -11,8 +11,9 @@ import sys
 from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy
+    QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox
 )
+from torch import layout
 
 from app.data import clear_dir_safe
 
@@ -104,12 +105,14 @@ class DisplayWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Network Outputs")
-        self.resize(400, 400)
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       Main Window Setup
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
-
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       define widgets 
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        
         # Prediction Label
         self.prediction_label = QLabel("Prediction: None")
         self.prediction_label.setAlignment(Qt.AlignCenter)
@@ -118,22 +121,97 @@ class DisplayWindow(QWidget):
 
         # Layer Label
         self.layer_label = QLabel("Layer of the CNN:")
-        self.layer_label.setAlignment(Qt.AlignCenter)
         self.layer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
 
         # Outputs Label
-        self.outputs_label = QLabel("Prediction: None")
-        self.outputs_label.setAlignment(Qt.AlignCenter)
+        self.outputs_label = QLabel("No Image")
         self.outputs_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.outputs_label.setMinimumSize(280, 280)
         self.outputs_label.setScaledContents(True)
 
-        layout.addStretch(1)
-        layout.addWidget(self.prediction_label)
-        layout.addWidget(self.layer_label)
-        layout.addWidget(self.outputs_label, stretch=1, alignment=Qt.AlignCenter)
-        layout.addStretch(1)
+        # Processed Label
+        self.processed_label = QLabel("No Image")
+        self.processed_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.outputs_label.setMinimumSize(280, 280)
+        self.processed_label.setScaledContents(True)
 
-        self.setLayout(layout)
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       define Layouts and Containers
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        # main layout and container for the central widget
+        main_layout = QHBoxLayout()
+        self.setLayout(main_layout)
+
+        # model group box and layout
+        output_box = QGroupBox("Output")   
+        output_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;                    
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                  
+        }
+        """)
+        output_layout = QVBoxLayout()
+
+        # model group box and layout
+        processed_box = QGroupBox("Processed Image")   
+        processed_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;                    
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                  
+        }
+        """)
+        processed_layout = QVBoxLayout()
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       add widgets to the layouts
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        # add Widgets to the output layout
+        #output_layout.addStretch()
+        output_layout.addWidget(self.layer_label)
+        output_layout.addWidget(self.outputs_label)
+        #output_layout.addStretch()
+        output_box.setLayout(output_layout)
+
+        # add processed label to the processed layout
+        processed_layout.addWidget(self.processed_label, alignment=Qt.AlignCenter)
+        processed_box.setLayout(processed_layout)
+
+        # add the model output box and processed box to the main layout
+        main_layout.addWidget(output_box)
+        main_layout.addWidget(processed_box)
+
+        # style the main layout with spacing and margins
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       StyleSheet for the main window and widgets
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        
+        self.setWindowTitle("Network Outputs")
+        self.resize(400, 400)
 
         self.setStyleSheet("""
         QWidget {
@@ -142,47 +220,41 @@ class DisplayWindow(QWidget):
         }
         QLabel {
             color: white;
+            font-size: 16px;
         }
         """)
     
-    # resize event to keep the output display square
-    def resizeEvent(self, event):
-        # calculate the available space for the output display, considering the space taken by the prediction and layer labels
-        available_height = self.height() - self.prediction_label.height() - self.layer_label.height() - 40
-        available_width = self.width() - 40
-        side = min(available_height, available_width)
-        self.outputs_label.setFixedSize(side, side)
-        super().resizeEvent(event)
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+    #                                                       define methods for events and actions
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+    # # resize event to keep the output display square
+    # def resizeEvent(self, event):
+    #     # calculate the available space for the output display, considering the space taken by the prediction and layer labels
+    #     available_height = self.height() - self.prediction_label.height() - self.layer_label.height() - 40
+    #     available_width = self.width() - 40
+    #     side = min(available_height, available_width)
+    #     self.outputs_label.setFixedSize(side, side)
+    #     super().resizeEvent(event)
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("CNN-GUI")
 
-        # display window for CNN outputs
-        self.display_window = DisplayWindow()
-
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       Main Window Setup
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
         # variables to keep track of the last saved input image and the selected model and a cache for loaded pixmaps to avoid reloading from disk
         self.last_saved_path = None
         self.selected_model = "MINIST-CNN"  # default model
         self.pixmap_cache = {}  # key = filename, value = QPixmap
         
-        # Container
-        container = QWidget()
-        inner_container_1 = QWidget()
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       define widgets 
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
 
-        self.setCentralWidget(container)
-        self.open_display_window()  # open the display window at startup
-
-        # Layouts
-        layout = QVBoxLayout(container)
-        layout.setAlignment(Qt.AlignCenter)
-
-        inner_layout_1 = QHBoxLayout(inner_container_1)
-        inner_layout_1.setAlignment(Qt.AlignCenter)
-
-        model_label = QLabel("Select Model:")
-        model_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        # Display Window for CNN Outputs
+        self.display_window = DisplayWindow()
 
         # Radio Buttons for model selection
         radio1 = QRadioButton("MINIST-CNN") # maybe later: "EMNIST-digits-CNN"
@@ -196,6 +268,15 @@ class MainWindow(QMainWindow):
         self.paint_area = PaintArea(280, 280)
         self.paint_area.set_pen_width(28)  # default pen width
         
+        # Run Button
+        run_button = QPushButton("run")
+        run_button.clicked.connect(self.run)
+
+        # Clear Button
+        clear_button = QPushButton("clear")
+        clear_button.setObjectName("clearButton")
+        clear_button.clicked.connect(self.paint_area.clear)
+
         # Slider for Output diashow
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setRange(1, 10)  # default range, will be updated based on number of output images
@@ -203,26 +284,13 @@ class MainWindow(QMainWindow):
         self.slider.setPageStep(1)
         self.slider.setTickInterval(1)
         self.slider.setTickPosition(QSlider.TicksBelow)
-        # StyleSheet for the slider with a custom design
-        # self.slider.setStyleSheet("""
-        # QSlider::groove:horizontal {
-        #     background: #3a3c4f;
-        #     height: 6px;
-        #     border-radius: 3px;
-        # }
-
-        # QSlider::handle:horizontal {
-        #     background: #7aa2f7;
-        #     width: 16px;
-        #     margin: -6px 0;
-        #     border-radius: 8px;
-        # }
-        # """)
-
         # slider event to update the output display when slider value changes
         self.display_output(initial=True)  # display the initial output
         self.slider.valueChanged.connect(lambda _: self.display_output(initial=False)) # update output display when slider value changes
 
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       define menu bar
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
 
         #MenuBar
         menubar = self.menuBar()
@@ -242,18 +310,126 @@ class MainWindow(QMainWindow):
         aboutAction = helpMenu.addAction("About")
         aboutAction.triggered.connect(lambda: QMessageBox.information(self, "Info", "CNN using PyTorch to classify MNIST data."))
 
-        # add widgets to the layouts
-        inner_layout_1.addStretch()
-        inner_layout_1.addWidget(radio1)
-        inner_layout_1.addWidget(radio2)
-        inner_layout_1.addWidget(radio3)
-        inner_layout_1.addStretch()
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       define Layouts and Containers
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
 
-        layout.addWidget(model_label)
-        layout.addWidget(inner_container_1)
-        layout.addWidget(self.paint_area, alignment=Qt.AlignCenter)
-        layout.addWidget(self.slider)
-         
+        # main layout and container for the central widget
+        main_layout = QVBoxLayout()
+        container = QWidget()
+        container.setLayout(main_layout)
+        self.setCentralWidget(container)
+
+        # model group box and layout
+        model_box = QGroupBox("Model Selection")   
+        model_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;                    
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                  
+        }
+        """)
+        model_layout = QHBoxLayout()
+
+        # draw box qframe and layout
+        draw_box = QFrame()
+        draw_box.setStyleSheet("""
+        QFrame {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;  
+        }
+        """)
+        draw_layout = QHBoxLayout()
+        button_layout = QVBoxLayout()
+
+        # slider box group box and layout
+        slider_box = QGroupBox("Model Selection")
+        slider_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                        
+        }
+        """)
+        slider_layout = QVBoxLayout()
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       add widgets to the layouts
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        # add radio buttons to the model selection layout
+        model_layout.addStretch()
+        model_layout.addWidget(radio1)
+        model_layout.addStretch()
+        model_layout.addWidget(radio2)
+        model_layout.addStretch()
+        model_layout.addWidget(radio3)
+        model_layout.addStretch()
+        # set the model selection layout to the model selection group box
+        model_box.setLayout(model_layout)
+
+        # add buttons to the button layout
+        button_layout.addStretch()
+        button_layout.addWidget(run_button)
+        button_layout.addWidget(clear_button)
+        button_layout.addStretch()
+        # add the paint area and buttons to the draw layout
+        draw_layout.addWidget(self.paint_area, alignment=Qt.AlignCenter)
+        draw_layout.addLayout(button_layout)
+        # set the draw layout to the draw box
+        draw_box.setLayout(draw_layout)
+
+        # add slider to the slider layout
+        slider_layout.addWidget(self.slider)
+        slider_box.setLayout(slider_layout)
+
+        # add the model selection box, draw box and slider to the main layout
+        main_layout.addWidget(model_box)
+        main_layout.addWidget(draw_box)
+        main_layout.addWidget(slider_box)
+
+        # style the main layout with spacing and margins
+
+        model_layout.setContentsMargins(10, 5, 10, 10)
+        model_layout.setSpacing(15)
+
+        model_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+
+        draw_layout.setSpacing(10)
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       open display window
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        self.open_display_window()  # open the display window at startup
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       StyleSheet for the main window and widgets
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        self.setWindowTitle("CNN-GUI")
         self.resize(600, 400)
 
         # StyleSheet for dark theme
@@ -313,7 +489,20 @@ class MainWindow(QMainWindow):
         QPushButton:hover {
             background-color: #5d8ec4;
         }
+        
+        QPushButton#clearButton {
+            background-color: #555;
+        }
+
+        QPushButton#clearButton:hover {
+            background-color: #777;
+        }
         """)
+
+    
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+    #                                                       define methods for events and actions
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
 
     # MainWindow-Methods
     def radio_changed(self):
@@ -367,8 +556,8 @@ class MainWindow(QMainWindow):
         # side = min(label.width(), label.height())  # fit to the smaller dimension of the label
 
         pm = pm.scaled(
-            280, 
-            280,
+            2800, 
+            2800,
             Qt.KeepAspectRatio,
             Qt.SmoothTransformation
         )

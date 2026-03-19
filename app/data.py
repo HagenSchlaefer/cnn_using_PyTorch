@@ -340,7 +340,8 @@ def save_activations(
     normalize: bool = True,
     padding: int = 1,
     image_size: int = 280,
-    show_x_labels: bool = False
+    show_x_labels: bool = False,
+    emnist_mapping_path: str = None
 ):
     os.makedirs(out_dir, exist_ok=True)
 
@@ -403,7 +404,7 @@ def save_activations(
             vec = (vec - vmin) / (max(vmax - vmin, 1e-6))
 
         fig, ax = plt.subplots(
-            figsize=(image_size/100, image_size/100),
+            figsize=(image_size/50, image_size/50),
             dpi=100
         )
 
@@ -431,7 +432,11 @@ def save_activations(
     if show_x_labels:
         ax.set_xlabel("Class")
         ax.set_xticks(x_idx)
-        ax.set_xticklabels([str(i) for i in x_idx], rotation=45, fontsize=8)
+        if emnist_mapping_path != None:
+            mapping = load_emnist_mapping(emnist_mapping_path)
+            ax.set_xticklabels([mapping[i] for i in x_idx], fontsize=8)
+        else:
+            ax.set_xticklabels([str(i) for i in x_idx], fontsize=8)
     else:
         ax.set_xticks([])
 

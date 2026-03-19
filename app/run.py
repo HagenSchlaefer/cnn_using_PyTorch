@@ -60,7 +60,7 @@ def run_EMINIST_balanced():
 
     save_activations(activations["fc1"], "5_fc1")
     save_activations(activations["fc2"], "6_fc2")
-    save_activations(activations["fc3"], "7_fc3", show_x_labels=True)
+    save_activations(activations["fc3"], "7_fc3", show_x_labels=True, emnist_mapping_path= r"data/EMNIST/raw/emnist-balanced-mapping.txt")
 
     # mapping of EMNIST labels
     return mapping[pred]
@@ -110,14 +110,14 @@ def run_EMINIST_letters():
 
     #save the activations of the layers for visualization
     #labeld so that they can be easily identified in the visualization
-    save_activations(activations["conv1"], "1_conv1")
+    save_activations(activations["conv1"], "1_conv1", mapping)
     save_activations(activations["convStride1"], "2_convStride1")
     save_activations(activations["conv2"], "3_conv2")
     save_activations(activations["convStride2"], "4_convStride2")
 
     save_activations(activations["fc1"], "5_fc1")
     save_activations(activations["fc2"], "6_fc2")
-    save_activations(activations["fc3"], "7_fc3", show_x_labels=True)
+    save_activations(activations["fc3"], "7_fc3", show_x_labels=True, emnist_mapping_path= r"data/EMNIST/raw/emnist-balanced-mapping.txt")
 
     # mapping of EMNIST labels
     return mapping[pred]
