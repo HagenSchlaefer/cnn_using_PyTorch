@@ -8,11 +8,16 @@ import io
 import os
 import sys
 
-from PySide6.QtCore import Qt, QPoint, QSize
+from PySide6.QtCore import Qt, QPoint, QSize, QTimer
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
 from PySide6.QtWidgets import (
     QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox
 )
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+import numpy as np
+
 from torch import layout
 
 from app.data import clear_dir_safe
@@ -20,6 +25,11 @@ from app.data import clear_dir_safe
 from .run import run_EMINIST_balanced, run_EMINIST_letters, run_MNIST
 from .cnn import test_input_image
 
+class MplCanvas(FigureCanvas):
+    def __init__(self):
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot(111)
+        super().__init__(self.fig)
 
 # PaintArea: Widget to draw on, using mouse events to create a simple painting application.
 class PaintArea(QWidget):
@@ -122,18 +132,26 @@ class DisplayWindow(QWidget):
         # Layer Label
         self.layer_label = QLabel("Layer of the CNN:")
         self.layer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-
+        
         # Outputs Label
         self.outputs_label = QLabel("No Image")
         self.outputs_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.outputs_label.setMinimumSize(280, 280)
         self.outputs_label.setScaledContents(True)
 
+        # Processed Matplotlib Canvas
+        self.processed_canvas = MplCanvas()
+        self.processed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.processed_canvas.setMinimumSize(280, 280)
+
+        # Beispielplot
+        self.processed_canvas.ax.plot([0,1,2], [0,1,0])
+
         # Processed Label
-        self.processed_label = QLabel("No Image")
-        self.processed_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.outputs_label.setMinimumSize(280, 280)
-        self.processed_label.setScaledContents(True)
+        # self.processed_label = QLabel("No Image")
+        # self.processed_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # self.processed_label.setMinimumSize(280, 280)
+        # self.processed_label.setScaledContents(True)
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define Layouts and Containers
@@ -188,19 +206,17 @@ class DisplayWindow(QWidget):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
 
         # add Widgets to the output layout
-        #output_layout.addStretch()
         output_layout.addWidget(self.layer_label)
         output_layout.addWidget(self.outputs_label)
-        #output_layout.addStretch()
         output_box.setLayout(output_layout)
 
         # add processed label to the processed layout
-        processed_layout.addWidget(self.processed_label, alignment=Qt.AlignCenter)
+        processed_layout.addWidget(self.processed_canvas, alignment=Qt.AlignCenter)
         processed_box.setLayout(processed_layout)
 
         # add the model output box and processed box to the main layout
-        main_layout.addWidget(output_box)
-        main_layout.addWidget(processed_box)
+        main_layout.addWidget(output_box, 1)
+        main_layout.addWidget(processed_box, 1)
 
         # style the main layout with spacing and margins
         main_layout.setSpacing(15)
@@ -594,6 +610,13 @@ class MainWindow(QMainWindow):
     def run(self):
         #save the current canvas as an image for CNN input
         self.save_image()
+
+        #XX
+        # original-pixmap (280x280)
+        #original = self.paint_area.canvas
+        #data = np.asarray(original)
+        data = np.zeros((26,26))  # Beispiel
+        self.img = self.display_window.processed_canvas.ax.imshow(data, cmap="gray")
         
         # clear old outputs and pixmap cache
         self.display_window.outputs_label.clear()
@@ -639,3 +662,6 @@ class MainWindow(QMainWindow):
         self.display_window.raise_()   # bring to front
         self.display_window.activateWindow()
 
+    def update_plot(self):
+        self.img.set_data(self.current_frame)
+        self.canvas.draw()
