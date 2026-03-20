@@ -4,5 +4,7 @@ todo.txt
 2. Eventuell Histogramm der Features -> dafür müste man die vergangenen Layer-Outputs speichern
 3. mehr funktionen der gui
 
+4. eventuel struktur des models in gui darstellen
+
 
 

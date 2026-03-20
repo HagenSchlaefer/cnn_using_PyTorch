@@ -22,7 +22,7 @@ from torch import layout
 
 from app.data import clear_dir_safe
 
-from .run import run_EMINIST_balanced, run_EMINIST_letters, run_MNIST
+from .run import run_EMINIST
 from .cnn import test_input_image
 
 class MplCanvas(FigureCanvas):
@@ -635,17 +635,17 @@ class MainWindow(QMainWindow):
         
         if self.selected_model == "MINIST-CNN":
             print("Running MINIST-CNN...")
-            prediction = run_MNIST()
+            prediction, activations, layer_names = run_EMINIST("digits", "MNIST-CNN.pth", "MNIST_structure")
             print("Prediction:", prediction)
 
         elif self.selected_model == "EMNIST-letters-CNN":
             print("Running EMNIST-letters-CNN...")
-            prediction = run_EMINIST_letters()
+            prediction, activations, layer_names = run_EMINIST("balanced", "EMNIST-balanced-CNN.pth", "EMNIST_balanced_structure")
             print("Prediction:", prediction)
 
         elif self.selected_model == "EMNIST-balanced-CNN":
             print("Running EMNIST-balanced-CNN...")
-            prediction = run_EMINIST_balanced()
+            prediction, activations, layer_names = run_EMINIST("balanced", "EMNIST-balanced-CNN.pth", "EMNIST_balanced_structure")
             print("Prediction:", prediction)
 
         self.display_window.prediction_label.setText(f"Prediction: {prediction}")

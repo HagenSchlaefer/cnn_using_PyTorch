@@ -101,7 +101,7 @@ def run(model, device, image_path):
         image = torch.from_numpy(image).float().to(device)  # (1, 1, 28, 28)
         output = model(image)
         pred = torch.argmax(output, dim=1)
-        return pred.item(), model
+        return pred.item()
 
 def test_input_image(image_path):
     image = prep_image(image_path)

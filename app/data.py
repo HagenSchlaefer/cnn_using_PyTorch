@@ -66,13 +66,25 @@ def load_emnist_cnn(split="balanced",train=True):
 
     return images, labels
 
-def load_emnist_mapping(path = r"data/EMNIST/raw/emnist-balanced-mapping.txt"):
+def load_emnist_mapping(path: str = None):
+    
+    if path is None:
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-balanced-mapping.txt")
+    
     mapping = {}
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
             key, val = line.split()
             mapping[int(key)] = chr(int(val))
+    
+    if not mapping:
+        raise ValueError(f"Mapping file is empty: {path}")
 
     return mapping
 
@@ -150,6 +162,17 @@ def get_activation(activations, name):
         activations[name] = output.detach()
     return hook
 
+# def normalize_per_channel(x):
+#     # normalise each channel to [0,1] separately
+#     c, h, w = x.shape
+#     x = x.view(c, -1)
+
+#     min_vals = x.min(dim=1, keepdim=True)[0]
+#     max_vals = x.max(dim=1, keepdim=True)[0]
+
+#     x = (x - min_vals) / (max_vals - min_vals + 1e-6)
+#     return x.view(c, h, w)
+
 def normalize_per_channel(x):
     # normalise each channel to [0,1] separately
     c, h, w = x.shape
@@ -158,9 +181,11 @@ def normalize_per_channel(x):
     min_vals = x.min(dim=1, keepdim=True)[0]
     max_vals = x.max(dim=1, keepdim=True)[0]
 
-    x = (x - min_vals) / (max_vals - min_vals + 1e-6)
-    return x.view(c, h, w)
+    denom = max_vals - min_vals
+    denom[denom == 0] = 1  # prevents division by 0
 
+    x = (x - min_vals) / denom
+    return x.view(c, h, w)
 
 def visualize_activations(x, name="layer"):
 # Visualize feature maps or activations of a layer
@@ -333,6 +358,27 @@ def save_activations_good(
     # ----------------------------------------
     print(f"{name}: unsupported shape {tuple(x.shape)}")
 
+def prepare_featuremaps(x: torch.Tensor):
+    x = x.detach().cpu()
+
+    if x.dim() == 4:
+        maps = x[0]  # (C,H,W)
+
+        # normalize
+        maps = normalize_per_channel(maps)
+
+        return maps.numpy() 
+    if x.dim() == 2:
+        vec = x[0].float().numpy()
+        
+        # normalize
+        vmin, vmax = vec.min(), vec.max()
+        vec = (vec - vmin) / (max(vmax - vmin, 1e-5))
+
+        # reshape to Featuremap
+        maps = vec.view(1, 1, -1)  # (C,H,W) with C = 1
+        return maps
+
 def save_activations(
     x: torch.Tensor,
     name: str = "layer",
@@ -346,7 +392,7 @@ def save_activations(
     os.makedirs(out_dir, exist_ok=True)
 
     if not isinstance(x, torch.Tensor):
-        raise TypeError(f"x muss torch.Tensor sein, bekam {type(x)}")
+        raise TypeError(f"x must be a {type(x)}")
 
     x = x.detach().cpu()
 
