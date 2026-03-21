@@ -1,17 +1,19 @@
 #ui.py
 
 from cProfile import label
+import json
 from pdb import pm
 
 from PIL import Image
 import io
 import os
+import shutil
 import sys
 
 from PySide6.QtCore import Qt, QPoint, QSize, QTimer
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox
+    QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox, QComboBox, QInputDialog
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -116,7 +118,7 @@ class DisplayWindow(QWidget):
         super().__init__()
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
-        #                                                       Main Window Setup
+        #                                                       Display Window Setup
         #-----------------------------------------------------------------------------------------------------------------------------------------------
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -206,6 +208,7 @@ class DisplayWindow(QWidget):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
 
         # add Widgets to the output layout
+        output_layout.addWidget(self.prediction_label)
         output_layout.addWidget(self.layer_label)
         output_layout.addWidget(self.outputs_label)
         output_box.setLayout(output_layout)
@@ -262,7 +265,8 @@ class MainWindow(QMainWindow):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         # variables to keep track of the last saved input image and the selected model and a cache for loaded pixmaps to avoid reloading from disk
         self.last_saved_path = None
-        self.selected_model = "MINIST-CNN"  # default model
+        self.selected_dataset = "digits"  # default dataset
+        self.selected_model = "MINIST-CNN"
         self.pixmap_cache = {}  # key = filename, value = QPixmap
         
         #-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -272,13 +276,29 @@ class MainWindow(QMainWindow):
         # Display Window for CNN Outputs
         self.display_window = DisplayWindow()
 
-        # Radio Buttons for model selection
-        radio1 = QRadioButton("MINIST-CNN") # maybe later: "EMNIST-digits-CNN"
-        radio1.setChecked(True)  # default selection
-        radio2 = QRadioButton("EMNIST-letters-CNN")
-        radio3 = QRadioButton("EMNIST-balanced-CNN")
-        for r in (radio1, radio2, radio3):
-            r.toggled.connect(self.radio_changed)
+        # Radio Buttons for dataset selection
+        self.rb_digits = QRadioButton("digits")
+        self.rb_digits.setChecked(True)  # default selection
+        self.rb_letters = QRadioButton("letters")
+        self.rb_balanced = QRadioButton("balanced")
+
+        # Buttons and Dropdown for model selection 
+        self.model_button = QPushButton("select new model")
+        self.model_button.clicked.connect(self.select_model)
+        self.model_dropdown = QComboBox()
+
+        # Buttons and Dropdown for model structure selection 
+        self.model_structure_button = QPushButton("select new model structure")
+        self.model_structure_button.clicked.connect(self.select_model_structure)
+        self.model_structure_dropdown = QComboBox()
+
+        # Buttons and Dropdown for recipe selection 
+        self.save_recipe_button = QPushButton("save recipe")
+        self.save_recipe_button.clicked.connect(self.save_recipe)
+        self.recipe_dropdown = QComboBox()
+        # Buttons for recipe application
+        self.apply_recipe_button = QPushButton("apply recipe")
+        self.apply_recipe_button.clicked.connect(lambda _: self.apply_recipe(self.recipe_dropdown.currentText()))
 
         # PaintArea and Layout
         self.paint_area = PaintArea(280, 280)
@@ -336,8 +356,28 @@ class MainWindow(QMainWindow):
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
-        # model group box and layout
-        model_box = QGroupBox("Model Selection")   
+        # dataset group box and layout
+        dataset_box = QGroupBox("Dataset Selection")   
+        dataset_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;                    
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                  
+        }
+        """)
+        dataset_layout = QHBoxLayout()
+
+        # model and model_structure group box and layout
+        model_box = QGroupBox("Model and Model structure Selection")   
         model_box.setStyleSheet("""
         QGroupBox {
             border: 2px solid #3a3c4f;
@@ -354,7 +394,31 @@ class MainWindow(QMainWindow):
             padding: 0 3px 0 3px;                  
         }
         """)
-        model_layout = QHBoxLayout()
+        main_model_layout = QHBoxLayout()
+        model_layout = QVBoxLayout()
+        model_structure_layout = QVBoxLayout()
+
+        # recipe group box and layout
+        recipe_box = QGroupBox("recipes")   
+        recipe_box.setStyleSheet("""
+        QGroupBox {
+            border: 2px solid #3a3c4f;
+            border-radius: 10px;
+            background-color: #252736;
+            margin-top: 10px;
+        }
+
+        QGroupBox::title {
+            color: white;
+            font-size: 16px;                    
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 3px 0 3px;                  
+        }
+        """)
+        main_recipe_layout = QHBoxLayout()
+        recipe_layout = QVBoxLayout()
+        apply_recipe_layout = QVBoxLayout()
 
         # draw box qframe and layout
         draw_box = QFrame()
@@ -369,7 +433,7 @@ class MainWindow(QMainWindow):
         button_layout = QVBoxLayout()
 
         # slider box group box and layout
-        slider_box = QGroupBox("Model Selection")
+        slider_box = QGroupBox("Layer Selection")
         slider_box.setStyleSheet("""
         QGroupBox {
             border: 2px solid #3a3c4f;
@@ -392,16 +456,47 @@ class MainWindow(QMainWindow):
         #                                                       add widgets to the layouts
         #-----------------------------------------------------------------------------------------------------------------------------------------------
 
-        # add radio buttons to the model selection layout
+        # add radio buttons to the dataset selection layout
+        dataset_layout.addStretch()
+        dataset_layout.addWidget(self.rb_digits)
+        dataset_layout.addStretch()
+        dataset_layout.addWidget(self.rb_letters)
+        dataset_layout.addStretch()
+        dataset_layout.addWidget(self.rb_balanced)
+        dataset_layout.addStretch()
+        # set the dataset selection layout to the dataset selection group box
+        dataset_box.setLayout(dataset_layout)
+
+        # add button and dropdown to the model layout
         model_layout.addStretch()
-        model_layout.addWidget(radio1)
+        model_layout.addWidget(self.model_button)
+        model_layout.addWidget(self.model_dropdown)
         model_layout.addStretch()
-        model_layout.addWidget(radio2)
-        model_layout.addStretch()
-        model_layout.addWidget(radio3)
-        model_layout.addStretch()
-        # set the model selection layout to the model selection group box
-        model_box.setLayout(model_layout)
+        # add button and dropdown to the model structure layout
+        model_structure_layout.addStretch()
+        model_structure_layout.addWidget(self.model_structure_button)
+        model_structure_layout.addWidget(self.model_structure_dropdown)
+        model_structure_layout.addStretch()
+        # add the model layout and model structure layout to the main model layout
+        main_model_layout.addLayout(model_layout)
+        main_model_layout.addLayout(model_structure_layout)
+        # set the main model layout to the model box
+        model_box.setLayout(main_model_layout) 
+        
+        # add button and dropdown to the recipe layout
+        recipe_layout.addStretch()
+        recipe_layout.addWidget(self.save_recipe_button)
+        recipe_layout.addWidget(self.recipe_dropdown)
+        recipe_layout.addStretch()
+        # add button to the apply recipe layout
+        apply_recipe_layout.addStretch()
+        apply_recipe_layout.addWidget(self.apply_recipe_button)
+        apply_recipe_layout.addStretch()
+        # add the recipe layout and apply recipe layout to the main recipe layout
+        main_recipe_layout.addLayout(recipe_layout)
+        main_recipe_layout.addLayout(apply_recipe_layout)
+        # set the main model layout to the model box
+        recipe_box.setLayout(main_recipe_layout) 
 
         # add buttons to the button layout
         button_layout.addStretch()
@@ -419,16 +514,18 @@ class MainWindow(QMainWindow):
         slider_box.setLayout(slider_layout)
 
         # add the model selection box, draw box and slider to the main layout
+        main_layout.addWidget(dataset_box)
         main_layout.addWidget(model_box)
+        main_layout.addWidget(recipe_box)
         main_layout.addWidget(draw_box)
         main_layout.addWidget(slider_box)
 
         # style the main layout with spacing and margins
 
-        model_layout.setContentsMargins(10, 5, 10, 10)
-        model_layout.setSpacing(15)
+        dataset_layout.setContentsMargins(10, 5, 10, 10)
+        dataset_layout.setSpacing(15)
 
-        model_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        dataset_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -521,16 +618,6 @@ class MainWindow(QMainWindow):
     #-----------------------------------------------------------------------------------------------------------------------------------------------
 
     # MainWindow-Methods
-    def radio_changed(self):
-        r = self.sender()
-        if r.isChecked():
-            self.selected_model = r.text()
-            print("Selected model:", self.selected_model)
-
-    def choose_color(self):
-        color = QColorDialog.getColor(initial=self.paint_area.pen_color, parent=self, title="select color")
-        if color.isValid():
-            self.paint_area.set_pen_color(color)
 
     # save the current canvas as a 28x28 image for CNN input
     def save_image(self):
@@ -653,6 +740,7 @@ class MainWindow(QMainWindow):
         self.slider.setValue(1)
         self.display_output(initial=False)
 
+    #XX
     def testImage(self):
         self.save_image()
         test_input_image("input/input.png")
@@ -662,6 +750,82 @@ class MainWindow(QMainWindow):
         self.display_window.raise_()   # bring to front
         self.display_window.activateWindow()
 
+    #XX
     def update_plot(self):
         self.img.set_data(self.current_frame)
         self.canvas.draw()
+
+    def select_model(self): 
+        file_path, _ = QFileDialog.getOpenFileName(self, "select new model", "", "PyTorch models (*.pth *.pt)")
+        if file_path:
+            file_name = os.path.basename(file_path)
+
+            target_path = os.path.join("models", file_name)
+            shutil.copy(file_path, target_path)
+            print(f"Model copied to {target_path}")
+
+            self.model_dropdown.addItem(file_name)
+
+    def select_model_structure(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "select new model", "", "PyTorch models (*.py)")
+        if file_path:
+            file_name = os.path.basename(file_path)
+
+            target_path = os.path.join("model_structures", file_name)
+            shutil.copy(file_path, target_path)
+            print(f"Model Structure copied to {target_path}")
+
+            self.model_structure_dropdown.addItem(file_name)
+    
+    def get_selected_dataset(self):
+        if self.rb_digits.isChecked():
+            return "digits"
+        elif self.rb_letters.isChecked():
+            return "letters"
+        return "balanced"
+
+    def load_recipes(self):
+        if not os.path.exists("recipes.json"):
+            return {}
+
+        with open("recipes.json", "r") as f:
+            return json.load(f)
+
+    def save_recipe(self):
+        name, ok = QInputDialog.getText(self, "save recipe", "name:")
+        if not ok or not name:
+            return
+
+        recipe = {
+            "dataset": self.get_selected_dataset(),
+            "model": self.model_dropdown.currentText(),
+            "structure": self.model_structure_dropdown.currentText()
+        }
+
+        data = self.load_recipes()
+        data[name] = recipe
+
+        with open("recipes.json", "w") as f:
+            json.dump(data, f, indent=4)
+
+        self.recipe_dropdown.addItem(name)
+
+    def apply_recipe(self, name):
+        print(name)
+        data = self.load_recipes()
+        recipe = data.get(name)
+
+        if not recipe:
+            return
+
+        # Dataset setzen
+        if recipe["dataset"] == "digits":
+            self.rb_digits.setChecked(True)
+        elif recipe["dataset"] == "letters":
+            self.rb_letters.setChecked(True)
+        else:
+            self.rb_balanced.setChecked(True)
+
+        # Dropdowns setzen
+        self.model_dropdown.setCurrentText(recipe["model"])
+        self.model_structure_dropdown.setCurrentText(recipe["structure"])

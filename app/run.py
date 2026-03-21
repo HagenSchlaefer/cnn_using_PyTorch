@@ -51,7 +51,7 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     # load the EMNIST mapping to convert predicted labels to characters
     mapping = load_emnist_mapping(mapping_path)
 
-    for name, layer in model.named_modules("ConvNet"):
+    for name, layer in model.named_modules():
         if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear)):
             layer_names.append(name)
             layer.register_forward_hook(get_activation(activations, name))

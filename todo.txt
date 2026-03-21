@@ -6,5 +6,13 @@ todo.txt
 
 4. eventuel struktur des models in gui darstellen
 
+model parameter
+
+dupdown idems automatisch beim innit laden
+rezept speichern button
+
+punke von chat gpt machen laden von rezepten modellen und model strukturen in dropdowns!!
+
+beim selecten eines neuen models den dropdown immer auf das neue model stellen
 
 

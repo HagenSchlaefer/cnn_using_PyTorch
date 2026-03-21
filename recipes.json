@@ -1,0 +1,17 @@
+{
+    "test": {
+        "dataset": "digits",
+        "model": "Netz_Normal.pt",
+        "structure": "myCnn2.py"
+    },
+    "test2": {
+        "dataset": "digits",
+        "model": "Netz_Normal.pt",
+        "structure": "myCnn2.py"
+    },
+    "test3": {
+        "dataset": "digits",
+        "model": "Netz_Normal.pt",
+        "structure": "myCnn2.py"
+    }
+}
