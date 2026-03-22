@@ -1,17 +1,12 @@
 {
-    "test": {
-        "dataset": "digits",
-        "model": "Netz_Normal.pt",
-        "structure": "myCnn2.py"
+    "balanced": {
+        "dataset": "balanced",
+        "model": "EMNIST-balanced-CNN.pth",
+        "structure": "EMNIST_balanced_structure"
     },
-    "test2": {
+    "mnist": {
         "dataset": "digits",
-        "model": "Netz_Normal.pt",
-        "structure": "myCnn2.py"
-    },
-    "test3": {
-        "dataset": "digits",
-        "model": "Netz_Normal.pt",
-        "structure": "myCnn2.py"
+        "model": "MNIST-CNN.pth",
+        "structure": "MNIST_structure"
     }
 }

@@ -24,7 +24,7 @@ from torch import layout
 
 from app.data import clear_dir_safe
 
-from .run import run_EMINIST
+from .run import run_EMINIST, load_model_class
 from .cnn import test_input_image
 
 class MplCanvas(FigureCanvas):
@@ -216,7 +216,7 @@ class DisplayWindow(QWidget):
         # add processed label to the processed layout
         processed_layout.addWidget(self.processed_canvas, alignment=Qt.AlignCenter)
         processed_box.setLayout(processed_layout)
-
+        
         # add the model output box and processed box to the main layout
         main_layout.addWidget(output_box, 1)
         main_layout.addWidget(processed_box, 1)
@@ -265,8 +265,9 @@ class MainWindow(QMainWindow):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         # variables to keep track of the last saved input image and the selected model and a cache for loaded pixmaps to avoid reloading from disk
         self.last_saved_path = None
-        self.selected_dataset = "digits"  # default dataset
-        self.selected_model = "MINIST-CNN"
+        #XX
+        #self.selected_dataset = "digits"  # default dataset
+        #self.selected_model = "MINIST-CNN"
         self.pixmap_cache = {}  # key = filename, value = QPixmap
         
         #-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -299,6 +300,10 @@ class MainWindow(QMainWindow):
         # Buttons for recipe application
         self.apply_recipe_button = QPushButton("apply recipe")
         self.apply_recipe_button.clicked.connect(lambda _: self.apply_recipe(self.recipe_dropdown.currentText()))
+
+        # Buttons to delete recipe
+        self.delete_recipe_button = QPushButton("delete recipe")
+        self.delete_recipe_button.clicked.connect(self.delete_recipe)
 
         # PaintArea and Layout
         self.paint_area = PaintArea(280, 280)
@@ -491,6 +496,7 @@ class MainWindow(QMainWindow):
         # add button to the apply recipe layout
         apply_recipe_layout.addStretch()
         apply_recipe_layout.addWidget(self.apply_recipe_button)
+        apply_recipe_layout.addWidget(self.delete_recipe_button)
         apply_recipe_layout.addStretch()
         # add the recipe layout and apply recipe layout to the main recipe layout
         main_recipe_layout.addLayout(recipe_layout)
@@ -612,6 +618,14 @@ class MainWindow(QMainWindow):
         }
         """)
 
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       init functions
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        self.scan_models()
+        self.scan_structures()
+        self.scan_recipes()
+        self.load_last_recipe()
     
     #-----------------------------------------------------------------------------------------------------------------------------------------------
     #                                                       define methods for events and actions
@@ -695,6 +709,19 @@ class MainWindow(QMainWindow):
                 break    
 
     def run(self):
+        dataset = self.get_selected_dataset()
+        model = self.model_dropdown.currentText()
+        model_structure = self.model_structure_dropdown.currentText()
+
+        # validate model and model structure input
+        if not self.validate_inputs():
+            return
+        
+        if not self.validate_structure(model_structure):
+            return
+        
+        self.save_last_recipe(self.recipe_dropdown.currentText())
+
         #save the current canvas as an image for CNN input
         self.save_image()
 
@@ -720,20 +747,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "No input to run.")
             return
         
-        if self.selected_model == "MINIST-CNN":
-            print("Running MINIST-CNN...")
-            prediction, activations, layer_names = run_EMINIST("digits", "MNIST-CNN.pth", "MNIST_structure")
-            print("Prediction:", prediction)
-
-        elif self.selected_model == "EMNIST-letters-CNN":
-            print("Running EMNIST-letters-CNN...")
-            prediction, activations, layer_names = run_EMINIST("balanced", "EMNIST-balanced-CNN.pth", "EMNIST_balanced_structure")
-            print("Prediction:", prediction)
-
-        elif self.selected_model == "EMNIST-balanced-CNN":
-            print("Running EMNIST-balanced-CNN...")
-            prediction, activations, layer_names = run_EMINIST("balanced", "EMNIST-balanced-CNN.pth", "EMNIST_balanced_structure")
-            print("Prediction:", prediction)
+        print("Running model...")
+        prediction, activations, layer_names = run_EMINIST(dataset, model, model_structure)
+        print("Prediction:", prediction)
 
         self.display_window.prediction_label.setText(f"Prediction: {prediction}")
 
@@ -766,6 +782,17 @@ class MainWindow(QMainWindow):
 
             self.model_dropdown.addItem(file_name)
 
+    def scan_models(self):
+        self.model_dropdown.clear()
+
+        model_dir = "models"
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+
+        for file in os.listdir(model_dir):
+            if file.endswith((".pth", ".pt")):
+                self.model_dropdown.addItem(file)
+
     def select_model_structure(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "select new model", "", "PyTorch models (*.py)")
         if file_path:
@@ -776,6 +803,16 @@ class MainWindow(QMainWindow):
             print(f"Model Structure copied to {target_path}")
 
             self.model_structure_dropdown.addItem(file_name)
+
+    def scan_structures(self):
+        self.model_structure_dropdown.clear()
+
+        structure_dir = "model_structures"
+
+        for file in os.listdir(structure_dir):
+            if file.endswith(".py") and file != "__init__.py":
+                name = file.replace(".py", "")
+                self.model_structure_dropdown.addItem(name)
     
     def get_selected_dataset(self):
         if self.rb_digits.isChecked():
@@ -790,6 +827,13 @@ class MainWindow(QMainWindow):
 
         with open("recipes.json", "r") as f:
             return json.load(f)
+
+    def scan_recipes(self):
+        self.recipe_dropdown.clear()
+        data = self.load_recipes()
+
+        for name in data.keys():
+            self.recipe_dropdown.addItem(name)
 
     def save_recipe(self):
         name, ok = QInputDialog.getText(self, "save recipe", "name:")
@@ -818,7 +862,7 @@ class MainWindow(QMainWindow):
         if not recipe:
             return
 
-        # Dataset setzen
+        # set dataset
         if recipe["dataset"] == "digits":
             self.rb_digits.setChecked(True)
         elif recipe["dataset"] == "letters":
@@ -826,6 +870,64 @@ class MainWindow(QMainWindow):
         else:
             self.rb_balanced.setChecked(True)
 
-        # Dropdowns setzen
+        # set dropdowns
         self.model_dropdown.setCurrentText(recipe["model"])
         self.model_structure_dropdown.setCurrentText(recipe["structure"])
+
+    def delete_recipe(self):
+        name = self.recipe_dropdown.currentText()
+        if not name:
+            return
+
+        data = self.load_recipes()
+
+        if name in data:
+            reply = QMessageBox.question(
+                self,
+                "Confirm",
+                f"delete recipe '{name}':",
+                QMessageBox.Yes | QMessageBox.No
+            )
+
+            if reply == QMessageBox.No:
+                return
+
+            del data[name]
+
+            with open("recipes.json", "w") as f:
+                json.dump(data, f, indent=4)
+
+            self.recipe_dropdown.removeItem(self.recipe_dropdown.currentIndex())
+
+    def save_last_recipe(self, name):
+        with open("last_recipe.txt", "w") as f:
+            f.write(name)
+
+    def load_last_recipe(self):
+        if not os.path.exists("last_recipe.txt"):
+            return
+
+        with open("last_recipe.txt", "r") as f:
+            name = f.read().strip()
+
+        self.apply_recipe(name)
+
+    def validate_inputs(self):
+        if self.model_dropdown.currentText() == "":
+            QMessageBox.warning(self, "Fehler", "Kein Model ausgewählt")
+            return False
+
+        if self.model_structure_dropdown.currentText() == "":
+            QMessageBox.warning(self, "Fehler", "Keine Struktur ausgewählt")
+            return False
+
+        return True
+    
+    def validate_structure(self, structure_name):
+        try:
+            load_model_class(structure_name)
+            return True
+        except Exception as e:
+            QMessageBox.warning(self, "Fehler", str(e))
+        return False
+    
