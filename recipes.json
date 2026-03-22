@@ -8,5 +8,10 @@
         "dataset": "digits",
         "model": "MNIST-CNN.pth",
         "structure": "MNIST_structure"
+    },
+    "kartus_balanced": {
+        "dataset": "balanced",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_3_layer.pth",
+        "structure": "alternatives_netz_3_layer_transponiert"
     }
 }

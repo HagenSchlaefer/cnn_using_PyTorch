@@ -52,7 +52,7 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     mapping = load_emnist_mapping(mapping_path)
 
     for name, layer in model.named_modules():
-        if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear)):
+        if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear, torch.nn.MaxPool2d)): #XX hier noch nach polling suchen
             layer_names.append(name)
             layer.register_forward_hook(get_activation(activations, name))
 

@@ -802,7 +802,8 @@ class MainWindow(QMainWindow):
             shutil.copy(file_path, target_path)
             print(f"Model Structure copied to {target_path}")
 
-            self.model_structure_dropdown.addItem(file_name)
+            module_name = file_name.replace(".py", "")
+            self.model_structure_dropdown.addItem(module_name)
 
     def scan_structures(self):
         self.model_structure_dropdown.clear()
@@ -914,11 +915,11 @@ class MainWindow(QMainWindow):
 
     def validate_inputs(self):
         if self.model_dropdown.currentText() == "":
-            QMessageBox.warning(self, "Fehler", "Kein Model ausgewählt")
+            QMessageBox.warning(self, "Error", "No model selected")
             return False
 
         if self.model_structure_dropdown.currentText() == "":
-            QMessageBox.warning(self, "Fehler", "Keine Struktur ausgewählt")
+            QMessageBox.warning(self, "Error", "No structure selected")
             return False
 
         return True
@@ -928,6 +929,6 @@ class MainWindow(QMainWindow):
             load_model_class(structure_name)
             return True
         except Exception as e:
-            QMessageBox.warning(self, "Fehler", str(e))
+            QMessageBox.warning(self, "Error", str(e))
         return False
     
