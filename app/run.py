@@ -2,6 +2,10 @@
 import os
 import torch
 import importlib
+import traceback
+
+import importlib.util, sys
+import os
 
 from .cnn import run
 from .data import get_activation, load_emnist_mapping
@@ -18,7 +22,7 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     layer_names = []
 
     # initialize the model
-    ModelClass = load_model_class(model_structure)
+    ModelClass = load_model_class_flex(model_structure)
     model = ModelClass().to(device)
 
     # Load the trained model
@@ -28,12 +32,27 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     if not os.path.exists(model_path):
         raise ValueError(f"Model file not found: {model_path}")
 
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
 
-    if isinstance(checkpoint, dict):
-        model.load_state_dict(checkpoint)
-    else:
-        raise ValueError("Model file does not contain a valid state_dict")
+    try:
+        if isinstance(checkpoint, dict):
+            if "model_state_dict" in checkpoint:
+                state_dict = checkpoint["model_state_dict"]
+            else:
+                state_dict = checkpoint
+
+        elif hasattr(checkpoint, "state_dict"):
+            state_dict = checkpoint.state_dict()
+
+        else:
+            raise ValueError("Unknown model format")
+
+        model.load_state_dict(state_dict)
+
+    except Exception as e:
+        traceback.print_exc()
+        raise ValueError(f"Unknown model format: {e}")
+
     model.eval()
 
     mapping_path = ""
@@ -52,7 +71,7 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     mapping = load_emnist_mapping(mapping_path)
 
     for name, layer in model.named_modules():
-        if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear, torch.nn.MaxPool2d)): #XX hier noch nach polling suchen
+        if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear, torch.nn.MaxPool2d)):
             layer_names.append(name)
             layer.register_forward_hook(get_activation(activations, name))
 
@@ -73,7 +92,22 @@ def load_model_class(model_structure: str):
     except AttributeError:
         raise ValueError(f"'ConvNet' class not found in {model_structure}")
 
+def load_model_class_flex(module_name: str):
+    
 
+    module_path = os.path.join("model_structures", module_name + ".py")
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
+    spec.loader.exec_module(mod)
+
+    # Search for first nn.Module class
+    for attr_name in dir(mod):
+        attr = getattr(mod, attr_name)
+        if isinstance(attr, type) and issubclass(attr, torch.nn.Module):
+            return attr
+
+    raise ValueError("No torch.nn.Module class found")
 # def run_EMINIST_letters():
 #     #run the EMNIST letters model on the input image and return the predicted label
 

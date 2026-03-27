@@ -9,6 +9,7 @@ import io
 import os
 import shutil
 import sys
+import traceback
 
 from PySide6.QtCore import Qt, QPoint, QSize, QTimer
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
@@ -24,7 +25,7 @@ from torch import layout
 
 from app.data import clear_dir_safe
 
-from .run import run_EMINIST, load_model_class
+from .run import run_EMINIST, load_model_class_flex
 from .cnn import test_input_image
 
 class MplCanvas(FigureCanvas):
@@ -924,11 +925,13 @@ class MainWindow(QMainWindow):
 
         return True
     
+    
     def validate_structure(self, structure_name):
         try:
-            load_model_class(structure_name)
+            load_model_class_flex(structure_name)
             return True
         except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+            print("Error loading module:")
+            traceback.print_exc()  # shows complete error message
+            QMessageBox.warning(self, "Error", f"Error loading model structure: {e}")
         return False
-    

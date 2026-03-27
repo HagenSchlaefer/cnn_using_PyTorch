@@ -13,5 +13,10 @@
         "dataset": "balanced",
         "model": "Ergebnisse_alternatives_Netz_transponiert_3_layer.pth",
         "structure": "alternatives_netz_3_layer_transponiert"
+    },
+    "karstus5Layer": {
+        "dataset": "balanced",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_5_layer 1.pt",
+        "structure": "alternatives_netz_3"
     }
 }
