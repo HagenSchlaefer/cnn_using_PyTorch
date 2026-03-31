@@ -18,5 +18,25 @@
         "dataset": "balanced",
         "model": "Ergebnisse_alternatives_Netz_transponiert_5_layer 1.pt",
         "structure": "alternatives_netz_3"
+    },
+    "1Example_2Layer_balanced": {
+        "dataset": "balanced",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_2_layer 1.pt",
+        "structure": "alternatives_Netz_2_layer_transponiert 1"
+    },
+    "2Example_3Layer_balanced": {
+        "dataset": "balanced",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_3_layer 2.pth",
+        "structure": "alternatives_netz_3_layer_transponiert 2"
+    },
+    "3Example_5Layer_balanced": {
+        "dataset": "balanced",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_5_layer 3.pt",
+        "structure": "alternatives_Netz_5_layer_transponiert 1"
+    },
+    "4Example_5Layer_letters": {
+        "dataset": "letters",
+        "model": "Ergebnisse_alternatives_Netz_transponiert_5_layer_letters 2.pt",
+        "structure": "alternatives_Netz_5_layer_transponiert_letters 2"
     }
 }

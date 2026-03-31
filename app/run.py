@@ -1,8 +1,10 @@
 #run.py
 import os
+from PIL import __main__
 import torch
 import importlib
 import traceback
+import torch.serialization
 
 import importlib.util, sys
 import os
@@ -24,6 +26,16 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     # initialize the model
     ModelClass = load_model_class_flex(model_structure)
     model = ModelClass().to(device)
+
+    
+    # IMPORTANT: Simulate "historical" class,
+    # which was saved in the .pth. or .py
+    import __main__
+    setattr(__main__, ModelClass.__name__, ModelClass)
+
+
+    # Important: register secure class in PyTorch
+    torch.serialization.add_safe_globals([ModelClass])
 
     # Load the trained model
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
