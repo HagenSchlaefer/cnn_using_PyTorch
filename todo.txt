@@ -1,18 +1,14 @@
 todo.txt
 
 1. Animaton der Layer
-2. Eventuell Histogramm der Features -> dafür müste man die vergangenen Layer-Outputs speichern
-3. mehr funktionen der gui
+2. slider und run button deaktiviern wenn animation leuft
+3. setigs page für animation on of normiern on off und model mit allem oder nur wichtige sachen anzeigen
+4. options page um neue modellle und model stucturen anzulegen und rezepte
+5. haubt page reduziern sodas mur noch draw area run button recepie dropdown und recepie activation da sind. (+ options und setings button)
+6. model structure darstellung + dasrstellen welches dataset und welches model
 
-4. eventuel struktur des models in gui darstellen
-
-model parameter
-
-dupdown idems automatisch beim innit laden
-rezept speichern button
-
-punke von chat gpt machen laden von rezepten modellen und model strukturen in dropdowns!!
-
+eventuell 
 beim selecten eines neuen models den dropdown immer auf das neue model stellen
 
+Flexibler louder und fehler erkennung aus pysite6 chtgpt chat!!!
 
