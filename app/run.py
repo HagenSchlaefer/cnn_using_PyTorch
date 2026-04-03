@@ -93,17 +93,6 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
     # mapping of EMNIST labels
     return mapping[pred], activations, layer_names 
 
-def load_model_class(model_structure: str):
-    try:
-        module = importlib.import_module(f"model_structures.{model_structure}")
-    except ModuleNotFoundError:
-        raise ValueError(f"Model structure module not found: {model_structure}")
-
-    try:
-        return getattr(module, "ConvNet")
-    except AttributeError:
-        raise ValueError(f"'ConvNet' class not found in {model_structure}")
-
 def load_model_class_flex(module_name: str):
     
 
@@ -120,6 +109,17 @@ def load_model_class_flex(module_name: str):
             return attr
 
     raise ValueError("No torch.nn.Module class found")
+
+# def load_model_class(model_structure: str):
+#     try:
+#         module = importlib.import_module(f"model_structures.{model_structure}")
+#     except ModuleNotFoundError:
+#         raise ValueError(f"Model structure module not found: {model_structure}")
+
+#     try:
+#         return getattr(module, "ConvNet")
+#     except AttributeError:
+#         raise ValueError(f"'ConvNet' class not found in {model_structure}")
 # def run_EMINIST_letters():
 #     #run the EMNIST letters model on the input image and return the predicted label
 

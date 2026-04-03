@@ -361,23 +361,28 @@ def save_activations_good(
 def prepare_featuremaps(x: torch.Tensor):
     x = x.detach().cpu()
 
+    # CNN Layer (B,C,H,W)
     if x.dim() == 4:
         maps = x[0]  # (C,H,W)
 
-        # normalize
+        if maps.dim() != 3:
+            raise ValueError(f"Expected (C,H,W), got {maps.shape}")
+
         maps = normalize_per_channel(maps)
+        return maps.numpy(), "conv"
 
-        return maps.numpy() 
-    if x.dim() == 2:
-        vec = x[0].float().numpy()
-        
-        # normalize
+    # FC Layer (B,N)
+    elif x.dim() == 2:
+        vec = x[0].float()
+
         vmin, vmax = vec.min(), vec.max()
-        vec = (vec - vmin) / (max(vmax - vmin, 1e-5))
+        denom = max((vmax - vmin).item(), 1e-5)
+        vec = (vec - vmin) / denom
 
-        # reshape to Featuremap
-        maps = vec.view(1, 1, -1)  # (C,H,W) with C = 1
-        return maps
+        return vec.numpy(), "fc"
+
+    else:
+        raise ValueError(f"Unsupported shape: {x.shape}")
 
 def save_activations(
     x: torch.Tensor,

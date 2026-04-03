@@ -16,6 +16,7 @@ from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
 from PySide6.QtWidgets import (
     QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox, QComboBox, QInputDialog
 )
+from matplotlib import axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -23,7 +24,8 @@ import numpy as np
 
 from torch import layout
 
-from app.data import clear_dir_safe
+from app.data import clear_dir_safe, load_emnist_mapping, prepare_featuremaps
+from app.train import BASE_DIR
 
 from .run import run_EMINIST, load_model_class_flex
 from .cnn import test_input_image
@@ -135,12 +137,11 @@ class DisplayWindow(QWidget):
         # Layer Label
         self.layer_label = QLabel("Layer of the CNN:")
         self.layer_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-        
-        # Outputs Label
-        self.outputs_label = QLabel("No Image")
-        self.outputs_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.outputs_label.setMinimumSize(280, 280)
-        self.outputs_label.setScaledContents(True)
+
+        # Output Matplotlib Canvas
+        self.output_canvas = MplCanvas()
+        self.output_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.output_canvas.setMinimumSize(280, 280)
 
         # Processed Matplotlib Canvas
         self.processed_canvas = MplCanvas()
@@ -211,7 +212,7 @@ class DisplayWindow(QWidget):
         # add Widgets to the output layout
         output_layout.addWidget(self.prediction_label)
         output_layout.addWidget(self.layer_label)
-        output_layout.addWidget(self.outputs_label)
+        output_layout.addWidget(self.output_canvas, alignment=Qt.AlignCenter)
         output_box.setLayout(output_layout)
 
         # add processed label to the processed layout
@@ -247,7 +248,7 @@ class DisplayWindow(QWidget):
     #-----------------------------------------------------------------------------------------------------------------------------------------------
     #                                                       define methods for events and actions
     #-----------------------------------------------------------------------------------------------------------------------------------------------
-
+    # XX
     # # resize event to keep the output display square
     # def resizeEvent(self, event):
     #     # calculate the available space for the output display, considering the space taken by the prediction and layer labels
@@ -264,11 +265,18 @@ class MainWindow(QMainWindow):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       Main Window Setup
         #-----------------------------------------------------------------------------------------------------------------------------------------------
-        # variables to keep track of the last saved input image and the selected model and a cache for loaded pixmaps to avoid reloading from disk
+        # variables 
         self.last_saved_path = None
+        
+        self.activations = None
+        self.layer_names = None
+
+        self.animation_enabled = True
+        self.is_animating = False
+
+        self.animation_delay = 500  # delay in milliseconds between animation frames
+
         #XX
-        #self.selected_dataset = "digits"  # default dataset
-        #self.selected_model = "MINIST-CNN"
         self.pixmap_cache = {}  # key = filename, value = QPixmap
         
         #-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -311,24 +319,25 @@ class MainWindow(QMainWindow):
         self.paint_area.set_pen_width(28)  # default pen width
         
         # Run Button
-        run_button = QPushButton("run")
-        run_button.clicked.connect(self.run)
+        self.run_button = QPushButton("run")
+        self.run_button.clicked.connect(self.run)
 
         # Clear Button
-        clear_button = QPushButton("clear")
-        clear_button.setObjectName("clearButton")
-        clear_button.clicked.connect(self.paint_area.clear)
+        self.clear_button = QPushButton("clear")
+        self.clear_button.setObjectName("clearButton")
+        self.clear_button.clicked.connect(self.paint_area.clear)
 
         # Slider for Output diashow
         self.slider = QSlider(Qt.Horizontal)
-        self.slider.setRange(1, 10)  # default range, will be updated based on number of output images
+        self.slider.setRange(1, 10)  # default range, will be updated based on number of output layers
         self.slider.setSingleStep(1)
         self.slider.setPageStep(1)
         self.slider.setTickInterval(1)
         self.slider.setTickPosition(QSlider.TicksBelow)
         # slider event to update the output display when slider value changes
-        self.display_output(initial=True)  # display the initial output
-        self.slider.valueChanged.connect(lambda _: self.display_output(initial=False)) # update output display when slider value changes
+        #XX
+        #self.display_output()  # display the initial output
+        self.slider.valueChanged.connect(self.on_slider_change) # update output canvas when slider value changes
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define menu bar
@@ -339,6 +348,7 @@ class MainWindow(QMainWindow):
 
         fileMenu = menubar.addMenu("File") 
         helpMenu = menubar.addMenu("Help")
+        viewMenu = menubar.addMenu("View")
 
         exitAction = fileMenu.addAction("Exit")
         exitAction.triggered.connect(self.close)
@@ -351,6 +361,9 @@ class MainWindow(QMainWindow):
        
         aboutAction = helpMenu.addAction("About")
         aboutAction.triggered.connect(lambda: QMessageBox.information(self, "Info", "CNN using PyTorch to classify MNIST data."))
+
+        openDisplayAction = viewMenu.addAction("Open Display Window")
+        openDisplayAction.triggered.connect(self.open_display_window)
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define Layouts and Containers
@@ -507,8 +520,8 @@ class MainWindow(QMainWindow):
 
         # add buttons to the button layout
         button_layout.addStretch()
-        button_layout.addWidget(run_button)
-        button_layout.addWidget(clear_button)
+        button_layout.addWidget(self.run_button)
+        button_layout.addWidget(self.clear_button)
         button_layout.addStretch()
         # add the paint area and buttons to the draw layout
         draw_layout.addWidget(self.paint_area, alignment=Qt.AlignCenter)
@@ -663,6 +676,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error saving image: {e}")
             print("Error saving image:", e)
 
+    # XX
     def load_pixmap_from_file(self, path):
 
         if path in self.pixmap_cache:
@@ -684,30 +698,246 @@ class MainWindow(QMainWindow):
 
         return pm
 
-    def display_output(self, initial=False):
-        os.makedirs("outputs", exist_ok=True)
+    def on_slider_change(self):
+        if self.is_animating:
+            return  # ignore slider changes during animation
+        
+        index = self.slider.value() - 1
+        self.show_layer(index)
 
-        if initial:
-            # display a default image or message when there are no outputs yet
-            self.display_window.outputs_label.setText("No outputs to display yet.")
-            self.display_window.layer_label.setText("Layer of the CNN:")
+    #XX
+    # def display_output(self, initial=False):
+    #     if initial:
+    #         self.display_window.layer_label.setText("Layer of the CNN:")
+    #         return
+
+    #     index = self.slider.value() - 1
+    #     self.show_layer(index)
+    
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+    #                                                       define methods for displaying the CNN outputs and animation
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+    def show_layer(self, layer_index):
+        layer_name = self.layer_names[layer_index]
+        x = self.activations[layer_name]
+
+        self.display_window.layer_label.setText(f"Layer: {layer_name}")
+
+        data, layer_type = prepare_featuremaps(x)
+        #XX
+        print("Prepared:", data.shape)
+
+        if layer_type == "conv":
+            self.show_featuremaps(data)
+        else:
+            is_last = (layer_index == len(self.layer_names) - 1)
+            self.show_fc(data, show_x_labels=is_last, dataset=self.get_selected_dataset())
+
+    def show_featuremaps(self, maps):
+
+        fig = self.display_window.output_canvas.fig
+        fig.clear()
+
+        C = maps.shape[0]
+        cols = int(np.ceil(np.sqrt(C)))
+        rows = int(np.ceil(C / cols))
+
+        axes = fig.subplots(rows, cols)
+
+        # if there is only one feature map, axes is not an array, so we need to make it an array for consistency
+        if not isinstance(axes, np.ndarray):
+            axes = np.array([axes])
+
+        axes = axes.flatten()
+
+        self.images = []
+
+        for i in range(len(axes)):
+            axes[i].axis("off")
+
+            if i < C:
+
+                fm = maps[i]
+
+                # sometimes the feature map has an extra dimension, we need to squeeze it to get the correct shape for imshow
+                if fm.ndim != 2:
+                    print("ERROR Featuremap shape:", fm.shape)
+                    fm = fm.squeeze()
+                # start with a blank image and then fill it in incrementally for the animation effect
+                img = axes[i].imshow(
+                    np.zeros_like(fm),
+                    cmap="gray",
+                    vmin=0,
+                    vmax=1
+                )
+                self.images.append((img, fm))
+
+        if not self.animation_enabled:
+            for img, fm in self.images:
+                img.set_data(fm)
+
+        self.display_window.output_canvas.draw()
+
+    def show_fc(self, vec, show_x_labels=False, dataset=None):
+
+        fig = self.display_window.output_canvas.fig
+        fig.clear()
+
+        ax = fig.add_subplot(111)
+
+        x_idx = np.arange(len(vec))
+        ax.bar(x_idx, vec)
+
+        ax.set_title("Fully Connected Layer")
+
+        if show_x_labels:
+            ax.set_xlabel("Class")
+            ax.set_xticks(x_idx)
+
+            if dataset is not None:
+
+                mapping_path = ""
+
+                match dataset:
+                    case "digits":
+                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-digits-mapping.txt")
+                    case "letters":
+                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-letters-mapping.txt")
+                    case "balanced":
+                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-balanced-mapping.txt")
+                    case _: # default case
+                        raise ValueError(f"Unknown dataset: {dataset}")
+
+                # load the EMNIST mapping to convert predicted labels to characters
+                mapping = load_emnist_mapping(mapping_path)
+    
+                ax.set_xticklabels([mapping[i] for i in x_idx], fontsize=8)
+            else:
+                ax.set_xticklabels([str(i) for i in x_idx], fontsize=8)
+        else:
+            ax.set_xticks([])
+
+        self.display_window.output_canvas.draw()
+    
+    # start the animation
+    def start_animation(self):
+        self.is_animating = True
+        self.set_controls_enabled(False)
+
+        self.current_layer = 0
+        self.slider.setValue(1)
+
+        self.animate_layer()
+
+    # animation for the current layer, updates the display incrementally to create an animation effect
+    def animate_layer(self):
+        # at the end of the animation, enable controls and return
+        if self.current_layer >= len(self.layer_names):
+            self.is_animating = False
+            self.set_controls_enabled(True)
+            self.display_window.prediction_label.setText(f"Prediction: {self.current_prediction}")
             return
-        # find all output images and update slider range
-        png_files = [f for f in os.listdir("outputs") if f.endswith(".png")]
-        num_outputs = len(png_files)
-        self.slider.setRange(1, max(1, num_outputs))
 
-        for name in png_files:
-            identifier = name.split("_")[0]
-            if identifier == str(self.slider.value()):
-                output_path = os.path.join("outputs", name)
-                pm = self.load_pixmap_from_file(output_path)
+        # update slider to current layer
+        self.slider.blockSignals(True)
+        self.slider.setValue(self.current_layer + 1)
+        self.slider.blockSignals(False)
 
-                self.display_window.outputs_label.setPixmap(pm)
-                self.display_window.outputs_label.show()
+        layer_name = self.layer_names[self.current_layer]
+        self.display_window.layer_label.setText(f"Layer: {layer_name}")
 
-                self.display_window.layer_label.setText(f"Layer of the CNN: {name.split('_')[1].split('.')[0]}")  # update layer label
-                break    
+        # get the activations for the current layer and display them
+        layer_name = self.layer_names[self.current_layer]
+        x = self.activations[layer_name]
+
+        data, layer_type = prepare_featuremaps(x)
+
+        if layer_type == "conv":
+            self.show_featuremaps(data)
+            self.current_pixel = 0
+
+            self.timer = QTimer()
+            self.timer.timeout.connect(self.update_animation)
+            self.timer.start(5)
+        else:
+            # FC → no Animation
+            is_last = (self.current_layer == len(self.layer_names) - 1)
+            self.show_fc(data, show_x_labels=is_last, dataset=self.get_selected_dataset())
+
+            QTimer.singleShot(self.animation_delay, self.next_layer)
+            
+
+ 
+    # XX
+    def update_animation_alt(self):
+
+        for img, full in self.images:
+            h, w = full.shape
+
+            y = self.current_pixel // w
+            x = self.current_pixel % w
+
+            if y < h and x < w:
+                temp = np.array(img.get_array())
+                temp[y, x] = full[y, x]
+                img.set_data(temp)
+
+        self.current_pixel += 1
+        self.display_window.output_canvas.draw_idle()
+
+        max_pixels = max(fm.size for _, fm in self.images)
+
+        if self.current_pixel >= max_pixels:
+            self.timer.stop()
+            self.next_layer()
+    
+    # animate the current layer, updates the display incrementally to create an animation effect
+    def update_animation(self):
+
+        finished = True
+
+        for img, full in self.images:
+            h, w = full.shape
+            max_pixels = h * w
+
+            if self.current_pixel < max_pixels:
+                y = self.current_pixel // w
+                x = self.current_pixel % w
+
+                temp = np.array(img.get_array())
+                temp[y, x] = full[y, x]
+                img.set_data(temp)
+
+                finished = False  # 🔥 wichtig
+
+        self.display_window.output_canvas.draw_idle()
+
+        self.current_pixel += 1
+
+        if finished:
+            # 🔥 FINAL sicherstellen
+            for img, full in self.images:
+                img.set_data(full)
+
+            self.display_window.output_canvas.draw()
+
+            self.timer.stop()
+            self.next_layer()
+
+    # animate next layer
+    def next_layer(self):
+        self.current_layer += 1
+        self.animate_layer()
+
+    # enable or disable controls during animation to prevent user interaction that could interfere with the animation
+    def set_controls_enabled(self, enabled):
+        self.slider.setEnabled(enabled)
+        self.run_button.setEnabled(enabled)
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------
+#                                                       run the model and get the activations for the display and animation
+#-----------------------------------------------------------------------------------------------------------------------------------------------
 
     def run(self):
         dataset = self.get_selected_dataset()
@@ -732,15 +962,6 @@ class MainWindow(QMainWindow):
         #data = np.asarray(original)
         data = np.zeros((26,26))  # Beispiel
         self.img = self.display_window.processed_canvas.ax.imshow(data, cmap="gray")
-        
-        # clear old outputs and pixmap cache
-        self.display_window.outputs_label.clear()
-        self.display_window.outputs_label.setPixmap(QPixmap())
-        self.pixmap_cache.clear()
-        QApplication.processEvents()  # Ressourcen freigeben
-
-        # delete old outputs and create new directory
-        clear_dir_safe("outputs")
 
         prediction = None
 
@@ -750,12 +971,20 @@ class MainWindow(QMainWindow):
         
         print("Running model...")
         prediction, activations, layer_names = run_EMINIST(dataset, model, model_structure)
+        self.activations = activations
+        self.layer_names = layer_names
+        self.slider.setRange(1, len(self.layer_names))
+        self.slider.setValue(1)
         print("Prediction:", prediction)
 
-        self.display_window.prediction_label.setText(f"Prediction: {prediction}")
+        if self.animation_enabled:
+            self.start_animation()
+        else:
+            self.show_layer(0)
 
-        self.slider.setValue(1)
-        self.display_output(initial=False)
+        self.current_prediction = prediction
+
+        
 
     #XX
     def testImage(self):
@@ -771,6 +1000,10 @@ class MainWindow(QMainWindow):
     def update_plot(self):
         self.img.set_data(self.current_frame)
         self.canvas.draw()
+
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+    #                                                       methods for model, model structure and recipe management
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
 
     def select_model(self): 
         file_path, _ = QFileDialog.getOpenFileName(self, "select new model", "", "PyTorch models (*.pth *.pt)")

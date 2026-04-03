@@ -1,1 +1,1 @@
-4Example_5Layer_letters
+mnist
