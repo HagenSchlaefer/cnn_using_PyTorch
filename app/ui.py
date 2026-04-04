@@ -729,12 +729,12 @@ class MainWindow(QMainWindow):
         print("Prepared:", data.shape)
 
         if layer_type == "conv":
-            self.show_featuremaps(data)
+            self.show_featuremaps(data, animation_mode=False)
         else:
             is_last = (layer_index == len(self.layer_names) - 1)
             self.show_fc(data, show_x_labels=is_last, dataset=self.get_selected_dataset())
 
-    def show_featuremaps(self, maps):
+    def show_featuremaps(self, maps, animation_mode=True):
 
         fig = self.display_window.output_canvas.fig
         fig.clear()
@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
                 )
                 self.images.append((img, fm))
 
-        if not self.animation_enabled:
+        if not animation_mode:
             for img, fm in self.images:
                 img.set_data(fm)
 
@@ -902,21 +902,23 @@ class MainWindow(QMainWindow):
             max_pixels = h * w
 
             if self.current_pixel < max_pixels:
-                y = self.current_pixel // w
-                x = self.current_pixel % w
+                pixel = min(self.current_pixel, max_pixels - 1)
+                y = pixel // w
+                x = pixel % w
 
+                #if y < h and x < w:
                 temp = np.array(img.get_array())
                 temp[y, x] = full[y, x]
                 img.set_data(temp)
 
-                finished = False  # 🔥 wichtig
+                finished = False  # important: if at least one image is not finished, we are not finished with the animation
 
         self.display_window.output_canvas.draw_idle()
 
         self.current_pixel += 1
 
         if finished:
-            # 🔥 FINAL sicherstellen
+
             for img, full in self.images:
                 img.set_data(full)
 

@@ -9,15 +9,14 @@ todo.txt
 7. Follbild
 8. Zeichen fläsche größer + autocrob
 
+das programm aufreumen
+
 eventuell 
 beim selecten eines neuen models den dropdown immer auf das neue model stellen
 
-Flexibler louder und fehler erkennung aus pysite6 chtgpt chat!!!
-
-prepare_featuremaps
 
 eventuell mapping in die gui verlagern 
 
 testen ob run auch geht wenn die animation aus ist
 
-ich habe immer noch das problem das manchmal der letzt pixel fehlt
+ich habe immer noch das problem das manchmal der letzt pixel fehlt. !! das probelm ist immer noch da ich muss etwas grundlegendes ändern und die funktion besser verstehen. vieleicht kann man auch die timer iterups wärend dem funktionsdurchlauf blockieren. ich solte das in einem neuen chat machen
