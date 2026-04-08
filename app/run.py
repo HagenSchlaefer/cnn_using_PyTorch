@@ -5,6 +5,7 @@ import torch
 import importlib
 import traceback
 import torch.serialization
+import numpy as np
 
 import importlib.util, sys
 import os
@@ -12,7 +13,7 @@ import os
 from .cnn import run
 from .data import get_activation, load_emnist_mapping
 
-def run_EMINIST(dataset: str, model_name: str, model_structure: str):
+def run_EMINIST(dataset: str, model_name: str, model_structure: str, image_tensor=None):
     #run the EMNIST balanced model on the input image and return the predicted label
 
     # Device configuration
@@ -67,31 +68,24 @@ def run_EMINIST(dataset: str, model_name: str, model_structure: str):
 
     model.eval()
 
-    mapping_path = ""
-
-    match dataset:
-        case "digits":
-            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-digits-mapping.txt")
-        case "letters":
-            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-letters-mapping.txt")
-        case "balanced":
-            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-balanced-mapping.txt")
-        case _: # default case
-            raise ValueError(f"Unknown dataset: {dataset}")
-
-    # load the EMNIST mapping to convert predicted labels to characters
-    mapping = load_emnist_mapping(mapping_path)
+    mapping = get_mapping_for_dataset(dataset)
 
     for name, layer in model.named_modules():
         if isinstance(layer, (torch.nn.Conv2d, torch.nn.Linear, torch.nn.MaxPool2d)):
             layer_names.append(name)
             layer.register_forward_hook(get_activation(activations, name))
 
+    try:
+        pred, softmax_output = run(model, device, image_tensor)
+    except Exception as e:
+        traceback.print_exc()
+        raise ValueError(f"Error during model inference: {e}")
+    
     #forward pass a the input image
-    pred = run(model, device, r"input\input.png")
+    pred, softmax_output = run(model, device, image_tensor)
 
     # mapping of EMNIST labels
-    return mapping[pred], activations, layer_names 
+    return mapping[pred], get_top5_predictions(softmax_output, mapping), activations, layer_names
 
 def load_model_class_flex(module_name: str):
     
@@ -109,6 +103,37 @@ def load_model_class_flex(module_name: str):
             return attr
 
     raise ValueError("No torch.nn.Module class found")
+
+def get_mapping_for_dataset(dataset: str):
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    match dataset:
+        case "digits":
+            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-digits-mapping.txt")
+        case "letters":
+            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-letters-mapping.txt")
+        case "balanced":
+            mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-balanced-mapping.txt")
+        case _: # default case
+            raise ValueError(f"Unknown dataset: {dataset}")
+
+    return load_emnist_mapping(mapping_path)
+
+def get_top5_predictions(softmax, mapping):
+
+    probs = softmax[0]  #(1, N) → (N,))
+
+    top5_indices = np.argsort(probs)[-5:][::-1] # get indices of top 5 predictions, sorted by probability in descending order
+
+    # create a list of the top 5 predictions with their labels and probabilities
+    top5 = []
+    for idx in top5_indices:
+        top5.append({
+            "index": int(idx),
+            "label": mapping[idx],
+            "probability": float(probs[idx])
+        })
+
+    return top5
 
 # def load_model_class(model_structure: str):
 #     try:

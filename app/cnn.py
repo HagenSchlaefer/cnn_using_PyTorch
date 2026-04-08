@@ -85,23 +85,22 @@ def plot_metrics(losses, accuracies, num_epochs):
     plt.title("Training Accuracy")
     plt.show()
 
-def run(model, device, image_path):
+def run(model, device, img_tensor):
 # predict label for a single image
+ 
+    if img_tensor is None:
+        raise ValueError("No preprocessed image")
 
-    # Test with a single image
-    image = prep_image(image_path)
-    if image is None:
-        print("Failed to preprocess image.")
-        return None
     
     #show_image(image[0])  # show the preprocessed image
 
     model.eval()
     with torch.no_grad():
-        image = torch.from_numpy(image).float().to(device)  # (1, 1, 28, 28)
+        image = torch.from_numpy(img_tensor).float().to(device)  # (1, 1, 28, 28)
         output = model(image)
         pred = torch.argmax(output, dim=1)
-        return pred.item()
+        softmax_output = torch.softmax(output, dim=1)
+        return pred.item(), softmax_output.cpu().numpy()
 
 def test_input_image(image_path):
     image = prep_image(image_path)

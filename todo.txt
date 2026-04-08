@@ -1,22 +1,24 @@
 todo.txt
 
-1. softmax für warscheinlichkeiten
-2. 5 wahrscheinlichsten klassen mit wahrscheinlichkeit anzeigen
+1. display page umbauen und ein feld für die model anzeige und ein feld für softmay hinzufügen 
+2. alle neune felder und button hinzufügen und neuer aufbau auf dem main window (ein coser container in dem der haubt contant gewächselt werden kann mit einem menü)
 3. setigs page für animation on of normiern on off und model mit allem oder nur wichtige sachen anzeigen
 4. options page um neue modellle und model stucturen anzulegen und rezepte
 5. haubt page reduziern sodas mur noch draw area run button recepie dropdown und recepie activation da sind. (+ options und setings button)
 6. model structure darstellung + dasrstellen welches dataset und welches model
-7. Follbild
-8. Zeichen fläsche größer + autocrob
+8. Zeichen fläsche größer
 
 das programm aufreumen
 
-eventuell 
+Eventuell:
 beim selecten eines neuen models den dropdown immer auf das neue model stellen
-
-
-eventuell mapping in die gui verlagern 
 
 testen ob run auch geht wenn die animation aus ist
 
+animation verbessern das die schneller ist und vieleicht mehr pixel aum einmahl läd
+
+
+
+Probelme:
 ich habe immer noch das problem das manchmal der letzt pixel fehlt. !! das probelm ist immer noch da ich muss etwas grundlegendes ändern und die funktion besser verstehen. vieleicht kann man auch die timer iterups wärend dem funktionsdurchlauf blockieren. ich solte das in einem neuen chat machen
+

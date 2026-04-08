@@ -12,10 +12,11 @@ import sys
 import traceback
 
 from PySide6.QtCore import Qt, QPoint, QSize, QTimer
-from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage
+from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox, QComboBox, QInputDialog
 )
+import cv2
 from matplotlib import axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -27,7 +28,7 @@ from torch import layout
 from app.data import clear_dir_safe, load_emnist_mapping, prepare_featuremaps
 from app.train import BASE_DIR
 
-from .run import run_EMINIST, load_model_class_flex
+from .run import run_EMINIST, load_model_class_flex, get_mapping_for_dataset, get_top5_predictions
 from .cnn import test_input_image
 
 class MplCanvas(FigureCanvas):
@@ -129,7 +130,7 @@ class DisplayWindow(QWidget):
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         
         # Prediction Label
-        self.prediction_label = QLabel("Prediction: None")
+        self.prediction_label = QLabel("Prediction: ...")
         self.prediction_label.setAlignment(Qt.AlignCenter)
         # StyleSheet for the prediction label with a different color to make it stand out
         self.prediction_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #7aa2f7;")
@@ -142,20 +143,26 @@ class DisplayWindow(QWidget):
         self.output_canvas = MplCanvas()
         self.output_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.output_canvas.setMinimumSize(280, 280)
+        self.output_canvas.ax.axis("off")  # hide axes for the output display
 
         # Processed Matplotlib Canvas
         self.processed_canvas = MplCanvas()
         self.processed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.processed_canvas.setMinimumSize(280, 280)
-
-        # Beispielplot
-        self.processed_canvas.ax.plot([0,1,2], [0,1,0])
+        self.processed_canvas.ax.axis("off")  # hide axes for the processed image display
 
         # Processed Label
         # self.processed_label = QLabel("No Image")
         # self.processed_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # self.processed_label.setMinimumSize(280, 280)
         # self.processed_label.setScaledContents(True)
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       schortcuts
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        shortcut = QShortcut(QKeySequence("F11"), self)
+        shortcut.activated.connect(self.toggle_fullscreen)
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define Layouts and Containers
@@ -248,6 +255,12 @@ class DisplayWindow(QWidget):
     #-----------------------------------------------------------------------------------------------------------------------------------------------
     #                                                       define methods for events and actions
     #-----------------------------------------------------------------------------------------------------------------------------------------------
+    
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
     # XX
     # # resize event to keep the output display square
     # def resizeEvent(self, event):
@@ -266,6 +279,8 @@ class MainWindow(QMainWindow):
         #                                                       Main Window Setup
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         # variables 
+
+        #XX
         self.last_saved_path = None
         
         self.activations = None
@@ -273,6 +288,9 @@ class MainWindow(QMainWindow):
 
         self.animation_enabled = True
         self.is_animating = False
+
+        self.auto_crop_enabled = True
+        self.auto_resize_with_padding = True
 
         self.animation_delay = 500  # delay in milliseconds between animation frames
 
@@ -340,6 +358,13 @@ class MainWindow(QMainWindow):
         self.slider.valueChanged.connect(self.on_slider_change) # update output canvas when slider value changes
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #                                                       schortcuts
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+        shortcut = QShortcut(QKeySequence("F11"), self)
+        shortcut.activated.connect(self.toggle_fullscreen)
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define menu bar
         #-----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -364,6 +389,13 @@ class MainWindow(QMainWindow):
 
         openDisplayAction = viewMenu.addAction("Open Display Window")
         openDisplayAction.triggered.connect(self.open_display_window)
+
+        fullscreenAction = viewMenu.addAction("Main Window Fullscreen On/Off")
+        fullscreenAction.triggered.connect(self.toggle_fullscreen)
+
+        fullscreenDisplayAction = viewMenu.addAction("Display Window Fullscreen On/Off")
+        fullscreenDisplayAction.triggered.connect(self.toggle_display_window)
+
 
         #-----------------------------------------------------------------------------------------------------------------------------------------------
         #                                                       define Layouts and Containers
@@ -645,8 +677,101 @@ class MainWindow(QMainWindow):
     #                                                       define methods for events and actions
     #-----------------------------------------------------------------------------------------------------------------------------------------------
 
-    # MainWindow-Methods
 
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+    #                                                       preprocessing functions
+    #-----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+    def crop_to_content_np(self, img: np.ndarray, bg_is_black: bool = True):   
+
+        if not bg_is_black:
+            img = 1.0 - img
+
+        # Maske für "Inhalt"
+        mask = img > img.mean() * 0.3 # dynamic threshold based on mean intensity, can be adjusted with a multiplier (e.g., 0.3) to be more or less aggressive in cropping
+
+        if not np.any(mask):
+            return img
+
+        coords = np.argwhere(mask)
+        y0, x0 = coords.min(axis=0)
+        y1, x1 = coords.max(axis=0) + 1
+
+        cropped = img[y0:y1, x0:x1]
+
+        h, w = cropped.shape
+        side = max(h, w)
+
+        square = np.zeros((side, side), dtype=np.float32)
+
+        y_offset = (side - h) // 2
+        x_offset = (side - w) // 2
+
+        square[y_offset:y_offset+h, x_offset:x_offset+w] = cropped
+        return square  
+    
+    def resize_with_padding(self, img, target_size=28, inner_size=20):
+
+        h, w = img.shape
+        scale = inner_size / max(h, w)
+
+        new_h = int(round(h * scale))
+        new_w = int(round(w * scale))
+
+        resized = cv2.resize(
+            img, (new_w, new_h),
+            interpolation=cv2.INTER_AREA
+        )
+
+        padded = np.zeros((target_size, target_size), dtype=np.float32)
+
+        y_offset = (target_size - new_h) // 2
+        x_offset = (target_size - new_w) // 2
+
+        padded[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
+        return padded    
+
+    def get_image_tensor(self):
+        original = self.paint_area.canvas
+        img = original.toImage().convertToFormat(QImage.Format.Format_Grayscale8)
+
+        small = img.scaled(
+            280, 280,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+        h = small.height()
+        w = small.width()
+        bpl = small.bytesPerLine()
+
+        ptr = small.constBits()
+        arr = np.frombuffer(ptr, dtype=np.uint8).reshape(h, bpl)
+        img_np = arr[:, :w]
+
+        img_np = img_np.astype(np.float32) / 255.0
+        img_np = 1.0 - img_np   # invert colors: black background (0) and white foreground (1)
+
+        if self.auto_crop_enabled:
+            img_np = self.crop_to_content_np(img_np)
+        
+        # Finales Resize auf 28×28
+        if self.auto_resize_with_padding:
+            img_np = self.resize_with_padding(
+                img_np,
+                target_size=28,
+                inner_size=20  # like EMNIST!
+            )
+        else:
+            img_np = cv2.resize(img_np, (28, 28), interpolation=cv2.INTER_AREA)
+
+        img_np = img_np.reshape(1, 1, 28, 28)
+
+        return img_np
+
+
+    #XX
     # save the current canvas as a 28x28 image for CNN input
     def save_image(self):
         # make sure the "input" directory exists
@@ -705,6 +830,28 @@ class MainWindow(QMainWindow):
         index = self.slider.value() - 1
         self.show_layer(index)
 
+    def open_display_window(self):
+        self.display_window.show()
+        self.display_window.raise_()   # bring to front
+        self.display_window.activateWindow()
+
+    # toggle fullscreen mode for the display window
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def toggle_display_window(self):
+        if self.display_window.isVisible():
+            if self.display_window.isFullScreen():
+                self.display_window.showNormal()
+            else:
+                self.display_window.showFullScreen()
+        else:
+            self.open_display_window()
+            self.display_window.showFullScreen()
+
     #XX
     # def display_output(self, initial=False):
     #     if initial:
@@ -718,6 +865,25 @@ class MainWindow(QMainWindow):
     #                                                       define methods for displaying the CNN outputs and animation
     #-----------------------------------------------------------------------------------------------------------------------------------------------
 
+    def show_processed_img(self, img):
+        fig = self.display_window.processed_canvas.fig
+        
+        fig.clear()                      
+        ax = fig.add_subplot(111)
+
+        ax.imshow(
+            img,
+            cmap="gray",
+            vmin=0,
+            vmax=1,
+            interpolation="nearest",   # <-- important for pixelated look
+            origin="upper"
+        )
+
+        ax.axis("off")
+        #self.display_window.processed_canvas.draw()
+        self.display_window.processed_canvas.draw_idle()
+
     def show_layer(self, layer_index):
         layer_name = self.layer_names[layer_index]
         x = self.activations[layer_name]
@@ -725,8 +891,6 @@ class MainWindow(QMainWindow):
         self.display_window.layer_label.setText(f"Layer: {layer_name}")
 
         data, layer_type = prepare_featuremaps(x)
-        #XX
-        print("Prepared:", data.shape)
 
         if layer_type == "conv":
             self.show_featuremaps(data, animation_mode=False)
@@ -797,20 +961,7 @@ class MainWindow(QMainWindow):
 
             if dataset is not None:
 
-                mapping_path = ""
-
-                match dataset:
-                    case "digits":
-                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-digits-mapping.txt")
-                    case "letters":
-                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-letters-mapping.txt")
-                    case "balanced":
-                        mapping_path = os.path.join(BASE_DIR, "data", "EMNIST", "raw", "emnist-balanced-mapping.txt")
-                    case _: # default case
-                        raise ValueError(f"Unknown dataset: {dataset}")
-
-                # load the EMNIST mapping to convert predicted labels to characters
-                mapping = load_emnist_mapping(mapping_path)
+                mapping = get_mapping_for_dataset(dataset)
     
                 ax.set_xticklabels([mapping[i] for i in x_idx], fontsize=8)
             else:
@@ -954,30 +1105,30 @@ class MainWindow(QMainWindow):
             return
         
         self.save_last_recipe(self.recipe_dropdown.currentText())
-
-        #save the current canvas as an image for CNN input
-        self.save_image()
-
-        #XX
-        # original-pixmap (280x280)
-        #original = self.paint_area.canvas
-        #data = np.asarray(original)
-        data = np.zeros((26,26))  # Beispiel
-        self.img = self.display_window.processed_canvas.ax.imshow(data, cmap="gray")
-
-        prediction = None
-
-        if self.last_saved_path == None:
+        
+        img_np = self.get_image_tensor()
+        
+        if img_np is None:
             QMessageBox.warning(self, "Warning", "No input to run.")
             return
+
+        # show the processed input image in the display window
+        self.show_processed_img(img_np[0, 0])
         
         print("Running model...")
-        prediction, activations, layer_names = run_EMINIST(dataset, model, model_structure)
+        prediction, softmax, activations, layer_names = run_EMINIST(dataset, model, model_structure, img_np)
         self.activations = activations
         self.layer_names = layer_names
         self.slider.setRange(1, len(self.layer_names))
         self.slider.setValue(1)
         print("Prediction:", prediction)
+
+        #XX
+        for item in softmax:
+            print(f"{item['label']} → {item['probability']*100:.2f}%")
+
+
+        self.display_window.prediction_label.setText(f"Prediction: ...")
 
         if self.animation_enabled:
             self.start_animation()
@@ -986,22 +1137,10 @@ class MainWindow(QMainWindow):
 
         self.current_prediction = prediction
 
-        
-
     #XX
     def testImage(self):
         self.save_image()
         test_input_image("input/input.png")
-    
-    def open_display_window(self):
-        self.display_window.show()
-        self.display_window.raise_()   # bring to front
-        self.display_window.activateWindow()
-
-    #XX
-    def update_plot(self):
-        self.img.set_data(self.current_frame)
-        self.canvas.draw()
 
     #-----------------------------------------------------------------------------------------------------------------------------------------------
     #                                                       methods for model, model structure and recipe management

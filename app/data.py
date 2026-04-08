@@ -139,6 +139,7 @@ def show_feature_maps(feature_maps):
     plt.imshow(grid)
     plt.show()
 
+#XX
 def prep_image(image_path):
     # load image in grayscale
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
