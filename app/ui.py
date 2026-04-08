@@ -14,7 +14,7 @@ import traceback
 from PySide6.QtCore import Qt, QPoint, QSize, QTimer
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QAction, QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QMainWindow, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox, QComboBox, QInputDialog
+    QApplication, QFrame, QMainWindow, QTableWidget, QWidget, QLabel, QFileDialog, QColorDialog, QToolBar, QVBoxLayout, QHBoxLayout, QMessageBox, QRadioButton, QSlider, QPushButton, QSizePolicy, QGroupBox, QComboBox, QInputDialog
 )
 import cv2
 from matplotlib import axes
@@ -145,11 +145,20 @@ class DisplayWindow(QWidget):
         self.output_canvas.setMinimumSize(280, 280)
         self.output_canvas.ax.axis("off")  # hide axes for the output display
 
+        # Softmax Output Table
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["Index", "Label", "Probability"])
+        self.table.setRowCount(5)
+
         # Processed Matplotlib Canvas
         self.processed_canvas = MplCanvas()
         self.processed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.processed_canvas.setMinimumSize(280, 280)
         self.processed_canvas.ax.axis("off")  # hide axes for the processed image display
+
+        # model structure label
+        #XX
 
         # Processed Label
         # self.processed_label = QLabel("No Image")
